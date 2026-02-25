@@ -1,16 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  
-  output: "export",
-
   trailingSlash: true,
+
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
 
   images: {
-    unoptimized: true,
     remotePatterns: [
       {
         protocol: "http",
@@ -20,7 +17,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "https://fortunekenya.com/api",
+        hostname: "fortunekenya.com",
         pathname: "/uploads/**",
       },
       {
