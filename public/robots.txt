@@ -1,0 +1,48 @@
+# robots.txt for fortunekenya.com
+# Block search engines from crawling admin and auth areas
+
+User-agent: *
+Allow: /
+
+# Disallow admin dashboard routes
+Disallow: /dashboard
+Disallow: /about-mgmt
+Disallow: /audit-logs
+Disallow: /call-to-actions
+Disallow: /clients
+Disallow: /consultations
+Disallow: /contact-info
+Disallow: /contacts
+Disallow: /content/
+Disallow: /crm/
+Disallow: /faqs-mgmt
+Disallow: /footer
+Disallow: /hero-dashboards
+Disallow: /marketing/
+Disallow: /media
+Disallow: /navigation
+Disallow: /pages
+Disallow: /products
+Disallow: /quote-requests
+Disallow: /recruitment/
+Disallow: /roles
+Disallow: /section-contents
+Disallow: /service-mgmt
+Disallow: /servicess
+Disallow: /settings
+Disallow: /social-links
+Disallow: /stats
+Disallow: /theme
+Disallow: /users
+
+# Disallow authentication pages
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Disallow API routes
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://fortunekenya.com/sitemap.xml
