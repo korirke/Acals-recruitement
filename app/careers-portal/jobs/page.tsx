@@ -142,7 +142,7 @@ function JobsPageContent() {
               Find Your Next Opportunity
             </h1>
             <p className="text-white/90 text-lg">
-              Discover {pagination.total} job openings from top companies
+              Discover {pagination.total} job openings
             </p>
 
             <Card className="p-3 bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800">
