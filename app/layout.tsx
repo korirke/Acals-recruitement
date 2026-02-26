@@ -24,8 +24,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Fortune Technologies Limited",
-  description: "Empowering businesses with intelligent HR solutions",
+  title: "ACAL Careers",
+  description: "Careers Portal",
 };
 
 export default function RootLayout({
