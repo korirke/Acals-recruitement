@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Authentication - Fortune Technologies",
+  title: "ACAL Careers - Authentication",
   description: "Login to your account",
 };
 
