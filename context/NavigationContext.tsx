@@ -13,19 +13,10 @@ import type {
   DropdownData,
   ThemeConfig,
 } from "@/types/api/navigation.types";
-import type {
-  HeroDashboard,
-  HeroContent,
-  HeroResponse,
-} from "@/types/api/hero.types";
-import { navigationService } from "@/services/public-services/navigationService";
-import { heroService } from "@/services/public-services/heroService";
 
 interface NavigationContextType {
   navItems: NavItem[];
   dropdownData: Record<string, DropdownData>;
-  heroDashboards: HeroDashboard[];
-  heroContent: HeroContent | undefined;
   themeConfig: ThemeConfig | undefined;
   isLoading: boolean;
   error: string | null;
@@ -40,8 +31,7 @@ interface NavigationProviderProps {
   children: ReactNode;
   initialNavItems?: NavItem[];
   initialDropdownData?: Record<string, DropdownData>;
-  initialHeroDashboards?: HeroDashboard[];
-  initialHeroContent?: HeroContent;
+
   initialThemeConfig?: ThemeConfig;
 }
 
@@ -49,20 +39,12 @@ export const NavigationProvider = ({
   children,
   initialNavItems = [],
   initialDropdownData = {},
-  initialHeroDashboards = [],
-  initialHeroContent,
   initialThemeConfig,
 }: NavigationProviderProps) => {
-  const [navItems, setNavItems] = useState<NavItem[]>(initialNavItems);
-  const [dropdownData, setDropdownData] =
+  const [navItems] = useState<NavItem[]>(initialNavItems);
+  const [dropdownData] =
     useState<Record<string, DropdownData>>(initialDropdownData);
-  const [heroDashboards, setHeroDashboards] = useState<HeroDashboard[]>(
-    initialHeroDashboards,
-  );
-  const [heroContent, setHeroContent] = useState<HeroContent | undefined>(
-    initialHeroContent,
-  );
-  const [themeConfig, setThemeConfig] = useState<ThemeConfig | undefined>(
+  const [themeConfig] = useState<ThemeConfig | undefined>(
     initialThemeConfig,
   );
   const [isLoading, setIsLoading] = useState(false);
@@ -75,27 +57,6 @@ export const NavigationProvider = ({
     try {
       setIsLoading(true);
       setError(null);
-
-      const [navigationData, heroData] = await Promise.allSettled([
-        navigationService.getNavigation(),
-        heroService.getHero(),
-      ]);
-
-      if (navigationData.status === "fulfilled") {
-        setNavItems(navigationData.value.navItems || []);
-        setDropdownData(navigationData.value.dropdownData || {});
-        setThemeConfig(navigationData.value.themeConfig);
-      } else {
-        console.error("Navigation fetch failed:", navigationData.reason);
-      }
-
-      if (heroData.status === "fulfilled") {
-        const response: HeroResponse = heroData.value;
-        setHeroDashboards(response.heroDashboards || []);
-        setHeroContent(response.heroContent);
-      } else {
-        console.error("Hero fetch failed:", heroData.reason);
-      }
 
       setHasFetched(true);
     } catch (err) {
@@ -110,9 +71,7 @@ export const NavigationProvider = ({
 
   useEffect(() => {
     const shouldFetch =
-      typeof window !== "undefined" &&
-      !hasFetched &&
-      (navItems.length === 0 || heroDashboards.length === 0);
+      typeof window !== "undefined" && !hasFetched && navItems.length === 0;
 
     if (shouldFetch) {
       fetchNavigationData();
@@ -120,8 +79,6 @@ export const NavigationProvider = ({
   }, []);
 
   const refetch = useCallback(async () => {
-    navigationService.clearCache();
-    heroService.clearCache();
     setHasFetched(false);
     await fetchNavigationData();
   }, [fetchNavigationData]);
@@ -131,8 +88,6 @@ export const NavigationProvider = ({
       value={{
         navItems,
         dropdownData,
-        heroDashboards,
-        heroContent,
         themeConfig,
         isLoading,
         error,
