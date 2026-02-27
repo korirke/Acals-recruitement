@@ -39,15 +39,6 @@ export default function SelectPortalPage() {
 
   const portals = [
     {
-      id: "website",
-      label: "Website",
-      tagline: "Content, pages & public materials",
-      detail:
-        "Manage your public-facing presence — edit pages, publish content, update the media library, and control SEO settings across the entire site.",
-      icon: Globe,
-      href: "/dashboard",
-    },
-    {
       id: "recruitment",
       label: "Recruitment",
       tagline: "Jobs, candidates & hiring",
@@ -55,15 +46,6 @@ export default function SelectPortalPage() {
         "Post new roles, track applicants through the hiring pipeline, schedule interviews, and manage every stage of the recruitment process in one place.",
       icon: Briefcase,
       href: "/recruitment-portal/dashboard",
-    },
-    {
-      id: "system",
-      label: "System",
-      tagline: "Users, roles & platform settings",
-      detail:
-        "Full control over the platform — manage user accounts, configure permissions and roles, review audit logs, and adjust system-wide security settings.",
-      icon: Shield,
-      href: "/system/dashboard",
     },
   ];
 
