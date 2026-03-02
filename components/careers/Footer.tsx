@@ -77,11 +77,11 @@ export default function Footer() {
             <ul className="space-y-2">
               <li className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
                 <Mail className="h-4 w-4 text-primary-500" />
-                support@fortunekenya.com
+                 jobs@acal.co.ke
               </li>
               <li className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
                 <Phone className="h-4 w-4 text-primary-500" />
-                +254 722 769 149
+                +254 717 535 337
               </li>
               <li className="flex items-center gap-2 text-sm text-neutral-600 dark:text-neutral-400">
                 <MapPin className="h-4 w-4 text-primary-500" />
@@ -93,7 +93,7 @@ export default function Footer() {
 
         <div className="border-t border-neutral-200 dark:border-neutral-800 mt-10 pt-6 text-center">
           <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            © {new Date().getFullYear()} CareerHub. All rights reserved.
+            © {new Date().getFullYear()} CareerHub ACAL. All rights reserved.
           </p>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             Powered by Fortune Technologies
