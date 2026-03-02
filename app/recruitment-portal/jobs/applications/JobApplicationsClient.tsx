@@ -61,6 +61,9 @@ export default function JobApplicationsClient() {
   );
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
+  // ── export loading state ──────────────────────────────────────────────
+  const [isExportingXLSX, setIsExportingXLSX] = useState(false);
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -207,21 +210,25 @@ export default function JobApplicationsClient() {
   //   }
   // };
 
+  // ── loading guard + spinner ──────────────────────────────────────
   const handleExportXLSX = async () => {
-    if (!jobId) return;
+    if (!jobId || isExportingXLSX) return;
 
     try {
+      setIsExportingXLSX(true);
       await applicationsService.exportToXLSX(jobId);
       toast({
-        title: "Export Started",
-        description: "Your Excel file will download shortly",
+        title: "Export Successful",
+        description: "Longlist Excel file downloaded successfully",
       });
     } catch (error: any) {
       toast({
         title: "Export Failed",
-        description: error.message || "Failed to export Excel",
+        description: error.message || "Failed to export Longlist Excel",
         variant: "destructive",
       });
+    } finally {
+      setIsExportingXLSX(false);
     }
   };
 
@@ -406,6 +413,8 @@ export default function JobApplicationsClient() {
             {totalResults !== 1 ? "s" : ""}
           </p>
         </div>
+
+        {/* ── UPDATED BUTTON ──────────────────────────────────────────────── */}
         <div className="flex gap-2">
           {/* <Button onClick={handleExportCSV} variant="outline" disabled={loading || applications.length === 0}>
             <Download className="h-4 w-4 mr-2" />
@@ -414,10 +423,19 @@ export default function JobApplicationsClient() {
           <Button
             onClick={handleExportXLSX}
             variant="outline"
-            disabled={loading || applications.length === 0}
+            disabled={isExportingXLSX || loading || applications.length === 0}
           >
-            <Download className="h-4 w-4 mr-2" />
-            Export Excel
+            {isExportingXLSX ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Export Longlist Excel
+              </>
+            )}
           </Button>
         </div>
       </div>
