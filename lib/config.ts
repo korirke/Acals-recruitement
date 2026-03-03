@@ -3,14 +3,14 @@ export const config = {
   apiBaseUrl:
     process.env.NEXT_PUBLIC_API_BASE_URL ||
     (process.env.NODE_ENV === "production"
-      ? "https://fortunekenya.com/v1/api"
+      ? "https://fortunekenya.com/v2/api"
       : "http://localhost:8080/api"),
 
   // Media/Upload Base URL (without /api)
   mediaBaseUrl:
     process.env.NEXT_PUBLIC_MEDIA_BASE_URL ||
     (process.env.NODE_ENV === "production"
-      ? "https://fortunekenya.com/v1"
+      ? "https://fortunekenya.com/v2"
       : "http://localhost:8080"),
 
   // Site Configuration
@@ -27,7 +27,7 @@ export const config = {
   isProd: process.env.NODE_ENV === "production",
 
   // API Timeout
-  apiTimeout: 10000, // 10 seconds
+  apiTimeout: 20000, // 20 seconds
 
   // Token Configuration
   tokenKey: "fortune_admin_token",
