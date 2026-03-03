@@ -6,7 +6,6 @@ import { ErrorProvider } from "@/context/ErrorContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 import "./globals.css";
 import { DynamicThemeProvider } from "@/context/DynamicThemeContext";
-import ChatWidgetLoader from "./ChatWidgetLoader";
 import { ToastProvider } from "@/components/admin/ui/Toast";
 import { NavigationProvider } from "@/context/NavigationContext";
 
@@ -91,7 +90,6 @@ export default function RootLayout({
                     />
                   </AuthProvider>
                 </ErrorProvider>
-                <ChatWidgetLoader />
               </DynamicThemeProvider>
             </NavigationProvider>
           </ToastProvider>
