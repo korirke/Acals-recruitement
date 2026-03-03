@@ -17,6 +17,7 @@ import { Badge } from "@/components/careers/ui/badge";
 import { Separator } from "@/components/careers/ui/separator";
 import Navbar from "@/components/careers/Navbar";
 import Footer from "@/components/careers/Footer";
+import { JDDocumentCard } from "@/components/jobs/JDDocumentCard";
 
 import {
   Loader2,
@@ -36,6 +37,7 @@ import {
   TrendingUp,
   Package,
   Info,
+  Zap,
 } from "lucide-react";
 
 import { useToast } from "@/components/admin/ui/Toast";
@@ -43,13 +45,10 @@ import type { Job } from "@/types";
 import { formatDistanceToNow } from "date-fns";
 import { normalizeImageUrl } from "@/lib/imageUtils";
 
-// ✅ REMOVED: Profile eligibility gate imports (no longer blocking apply)
+// Profile eligibility gate imports (no longer blocking apply)
 // import { useJobProfileEligibility } from "@/hooks/useJobProfileEligibility";
 // import { ProfileRequirementGateCard } from "@/components/careers/jobs/ProfileRequirementGateCard";
 
-/**
- * Supports string | string[] | null | undefined
- */
 const parseTextToList = (text?: string | string[] | null) => {
   if (!text) return [];
   if (Array.isArray(text)) {
@@ -75,14 +74,14 @@ export default function JobDetailsClient() {
   const [hasApplied, setHasApplied] = useState(false);
   const [checkingApplication, setCheckingApplication] = useState(true);
 
-  // ✅ REMOVED: Eligibility checking logic (no longer needed)
+  // Eligibility checking logic (no longer needed)
   // const eligibilityEnabled = !!user && user.role === "CANDIDATE" && !!jobId;
   // const { eligibility } = useJobProfileEligibility({
   //   jobId,
   //   enabled: eligibilityEnabled,
   // });
 
-  // ✅ REMOVED: blockApply logic (apply button is never blocked)
+  // blockApply logic (apply button is never blocked)
   // const blockApply =
   //   user?.role === "CANDIDATE" &&
   //   eligibility &&
@@ -269,6 +268,10 @@ export default function JobDetailsClient() {
   const requirementsList = useMemo(
     () => parseTextToList(job?.requirements),
     [job?.requirements],
+  );
+  const keySkillsAndCompetenciesList = useMemo(
+    () => parseTextToList(job?.keySkillsAndCompetencies),
+    [job?.keySkillsAndCompetencies],
   );
   const niceToHaveList = useMemo(
     () => parseTextToList(job?.niceToHave),
@@ -471,6 +474,31 @@ export default function JobDetailsClient() {
                   </Card>
                 )}
 
+                {/* ── NEW: Key Skills and Competencies ─────────────────────────── */}
+                {keySkillsAndCompetenciesList.length > 0 && (
+                  <Card className="border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                    <CardHeader>
+                      <CardTitle className="text-xl font-bold text-neutral-900 dark:text-white flex items-center gap-2">
+                        <Zap className="h-5 w-5 text-yellow-500" />
+                        Key Skills &amp; Competencies
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ul className="space-y-3">
+                        {keySkillsAndCompetenciesList.map((item, index) => (
+                          <li key={index} className="flex items-start gap-3">
+                            <Zap className="h-5 w-5 text-yellow-500 dark:text-yellow-400 shrink-0 mt-0.5" />
+                            <p className="text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                              {item}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                )}
+                {/* ─────────────────────────────────────────────────────────────── */}
+
                 {/* Nice to Have */}
                 {niceToHaveList.length > 0 && (
                   <Card className="border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
@@ -572,26 +600,6 @@ export default function JobDetailsClient() {
                     <Separator />
 
                     <div className="grid md:grid-cols-2 gap-4">
-                      {job.company.industry && (
-                        <div className="p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
-                          <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
-                            Industry
-                          </p>
-                          <p className="font-semibold text-neutral-900 dark:text-white">
-                            {job.company.industry}
-                          </p>
-                        </div>
-                      )}
-                      {job.company.companySize && (
-                        <div className="p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
-                          <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
-                            Company Size
-                          </p>
-                          <p className="font-semibold text-neutral-900 dark:text-white">
-                            {job.company.companySize}
-                          </p>
-                        </div>
-                      )}
                       {job.company.location && (
                         <div className="p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
                           <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">
@@ -614,9 +622,11 @@ export default function JobDetailsClient() {
                             rel="noopener noreferrer"
                             className="font-semibold text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1"
                           >
-                            {job.company.website
-                              .replace(/^https?:\/\//, "")
-                              .split("/")[0]}
+                            {
+                              job.company.website
+                                .replace(/^https?:\/\//, "")
+                                .split("/")[0]
+                            }
                             <Globe className="h-3.5 w-3.5" />
                           </a>
                         </div>
@@ -670,13 +680,14 @@ export default function JobDetailsClient() {
                           </Button>
                         </div>
                       ) : (
-                        // ✅ SIMPLIFIED: Always allow apply if not already applied
                         <Button
                           asChild
                           size="lg"
                           className="w-full bg-linear-to-r from-primary-500 to-orange-500 hover:from-primary-600 hover:to-orange-600 text-white shadow-lg"
                         >
-                          <Link href={`/careers-portal/jobs/apply?jobId=${jobId}`}>
+                          <Link
+                            href={`/careers-portal/jobs/apply?jobId=${jobId}`}
+                          >
                             <Send className="h-5 w-5 mr-2" />
                             Apply for this Job
                           </Link>
@@ -813,6 +824,7 @@ export default function JobDetailsClient() {
                     )}
                   </CardContent>
                 </Card>
+                <JDDocumentCard jdDocumentUrl={job.jdDocumentUrl} />
               </div>
             </div>
           </div>
