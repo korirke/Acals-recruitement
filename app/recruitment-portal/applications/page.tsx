@@ -53,15 +53,16 @@ export default function ApplicationsManagementPage() {
   const router = useRouter();
 
   const [applications, setApplications] = useState<ApplicationForEmployer[]>(
-    []
+    [],
   );
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedApplications, setSelectedApplications] = useState<string[]>(
-    []
+    [],
   );
   const [isBulkUpdating, setIsBulkUpdating] = useState(false);
+  const [isExportingXLSX, setIsExportingXLSX] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -85,7 +86,7 @@ export default function ApplicationsManagementPage() {
     if (
       !user ||
       !["EMPLOYER", "HR_MANAGER", "MODERATOR", "SUPER_ADMIN"].includes(
-        user.role
+        user.role,
       )
     ) {
       router.push("/careers-portal");
@@ -147,7 +148,7 @@ export default function ApplicationsManagementPage() {
     if (newStatus === "INTERVIEW") {
       if (selectedApplications.length !== 1) {
         toast.error(
-          "Please select exactly one application to schedule an interview"
+          "Please select exactly one application to schedule an interview",
         );
         return;
       }
@@ -180,7 +181,7 @@ export default function ApplicationsManagementPage() {
       });
 
       toast.success(
-        `${pendingStatusChange.applicationIds.length} application(s) updated to ${pendingStatusChange.status}`
+        `${pendingStatusChange.applicationIds.length} application(s) updated to ${pendingStatusChange.status}`,
       );
 
       setSelectedApplications([]);
@@ -212,11 +213,19 @@ export default function ApplicationsManagementPage() {
   };
 
   const handleExportXLSX = async () => {
+    if (isExportingXLSX) return;
+
     try {
+      setIsExportingXLSX(true);
+
+      const loadingToast = toast.loading("Preparing Longlist Excel export...");
       await applicationsService.exportToXLSX();
-      toast.success("Excel export started - your file will download shortly");
+      toast.dismiss(loadingToast);
+      toast.success("Longlist Excel exported successfully!");
     } catch (error: any) {
-      toast.error(error.message || "Failed to export Excel");
+      toast.error(error.message || "Failed to export Longlist Excel");
+    } finally {
+      setIsExportingXLSX(false);
     }
   };
 
@@ -275,7 +284,7 @@ export default function ApplicationsManagementPage() {
           className={currentPage === i ? "bg-primary-500" : ""}
         >
           {i}
-        </Button>
+        </Button>,
       );
     }
 
@@ -385,9 +394,23 @@ export default function ApplicationsManagementPage() {
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button> */}
-          <Button onClick={handleExportXLSX} variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export Excel
+          <Button
+            onClick={handleExportXLSX}
+            variant="outline"
+            size="sm"
+            disabled={isExportingXLSX}
+          >
+            {isExportingXLSX ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Export Longlist Excel
+              </>
+            )}
           </Button>
         </div>
       </div>
@@ -533,7 +556,7 @@ export default function ApplicationsManagementPage() {
                           ]);
                         } else {
                           setSelectedApplications((prev) =>
-                            prev.filter((id) => id !== application.id)
+                            prev.filter((id) => id !== application.id),
                           );
                         }
                       }}
@@ -647,7 +670,7 @@ export default function ApplicationsManagementPage() {
                                     <Star className="h-3 w-3 ml-1 inline" />
                                   )}
                                 </Badge>
-                              )
+                              ),
                             )}
                           </div>
                         )}
@@ -667,7 +690,8 @@ export default function ApplicationsManagementPage() {
                           <a
                             href={
                               getFileUrl(
-                                application.candidate.candidateProfile.resumeUrl
+                                application.candidate.candidateProfile
+                                  .resumeUrl,
                               ) ?? undefined
                             }
                             target="_blank"
