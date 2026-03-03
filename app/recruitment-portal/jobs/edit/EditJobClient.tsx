@@ -8,6 +8,7 @@ import { useJobs } from "@/hooks/useJobs";
 import { useJobForm } from "@/hooks/useJobForm";
 import { JobEditor } from "@/components/jobs/JobEditor";
 import { JobProfileRequirementsEditor } from "@/components/jobs/JobProfileRequirementsEditor";
+import { JobQuestionnaireEditor } from "@/components/jobs/JobQuestionnaireEditor";
 
 export default function EditJobClient({ jobId }: { jobId: string }) {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function EditJobClient({ jobId }: { jobId: string }) {
   const [ready, setReady] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [jobTitle, setJobTitle] = useState<string>("");
 
   const isAdmin = useMemo(() => {
     const roles = ["SUPER_ADMIN", "HR_MANAGER", "MODERATOR"];
@@ -48,13 +50,17 @@ export default function EditJobClient({ jobId }: { jobId: string }) {
         return;
       }
 
+      setJobTitle(job.title || "");
+
       updateMultipleFields({
         title: job.title || "",
         description: job.description || "",
         responsibilities: job.responsibilities || "",
         requirements: job.requirements || "",
+        keySkillsAndCompetencies: job.keySkillsAndCompetencies || "",
         benefits: job.benefits || "",
         niceToHave: job.niceToHave || "",
+        jdDocumentUrl: job.jdDocumentUrl || undefined,
         type: job.type,
         experienceLevel: job.experienceLevel,
         location: job.location || "",
@@ -73,6 +79,7 @@ export default function EditJobClient({ jobId }: { jobId: string }) {
 
       setReady(true);
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, jobId]);
 
   if (!ready || loading) {
@@ -117,6 +124,7 @@ export default function EditJobClient({ jobId }: { jobId: string }) {
         title="Edit Job"
         subtitle="Update job details. Save as draft or save changes."
         backHref="/recruitment-portal/jobs"
+        editingJobTitle={jobTitle}
         userRole={user?.role}
         isAdmin={isAdmin}
         categories={categories}
@@ -134,9 +142,14 @@ export default function EditJobClient({ jobId }: { jobId: string }) {
         previewHref={`/careers-portal/jobs/job-detail?id=${jobId}`}
       />
 
-      {/* Job Profile Requirements Editor - Only in EDIT mode */}
+      {/* Job Profile Requirements Editor */}
       <div className="container mx-auto px-4 py-6">
         <JobProfileRequirementsEditor jobId={jobId} />
+      </div>
+
+      {/* Questionnaire Editor */}
+      <div className="container mx-auto px-4 pb-10">
+        <JobQuestionnaireEditor jobId={jobId} />
       </div>
     </div>
   );
