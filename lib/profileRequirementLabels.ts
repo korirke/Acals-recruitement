@@ -19,4 +19,5 @@ export const PROFILE_REQUIREMENT_LABELS: Record<ProfileRequirementKey, string> =
     DOCUMENT_NATIONAL_ID: "National ID document",
     DOCUMENT_ACADEMIC_CERT: "Academic certificates",
     DOCUMENT_PROFESSIONAL_CERT: "Professional certificates",
+    DOCUMENT_DRIVING_LICENSE: "Driving license"
   };
