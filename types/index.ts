@@ -26,14 +26,6 @@ export * from './api/testimonial.types';
 export * from './api/faq.types';
 export * from './api/search.types';
 
-
-// ========================================
-// Model Types
-// ========================================
-// export * from './models/admin.types';
-
-
-
 // ========================================
 // Recruitment Types
 // ========================================
@@ -46,6 +38,7 @@ export * from './recruitment/profileRequirements.types';
 export * from './recruitment/company.types';
 export * from './recruitment/profileFieldSettings.types';
 export * from './recruitment/shortlist.types';
+export * from "./recruitment/jobQuestionnaire.types";
 
 // ========================================
 // System Types
@@ -90,19 +83,6 @@ export interface CallToAction {
   textColor?: string;
   position: number;
   isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface FileUpload {
-  id: string;
-  filename: string;
-  originalName: string;
-  mimetype: string;
-  size: number;
-  path: string;
-  url: string;
-  uploadedBy?: string;
   createdAt: string;
   updatedAt: string;
 }
