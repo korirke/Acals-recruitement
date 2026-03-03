@@ -20,7 +20,7 @@ interface Props {
   onResumeUploaded: (url: string) => void;
 }
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_TYPES = [
   "application/pdf",
   "application/msword",
@@ -45,7 +45,7 @@ export default function ResumeUploadSection({ resumeUrl, onResumeUploaded }: Pro
       return "Invalid file type. Only PDF, DOC, and DOCX files are allowed.";
     }
     if (file.size > MAX_FILE_SIZE) {
-      return "File size exceeds 5MB limit.";
+      return "File size exceeds 2MB limit.";
     }
     const ext = file.name.split(".").pop()?.toLowerCase();
     if (!["pdf", "doc", "docx"].includes(ext || "")) {
