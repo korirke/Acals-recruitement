@@ -281,12 +281,12 @@ function JobsPageContent() {
       <section className="flex-1 py-8 bg-neutral-50 dark:bg-neutral-950">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           {/* Profile Completion Banner */}
-          {shouldShowBanner && (
+          {/* {shouldShowBanner && (
             <ProfileCompletionBanner
               status={profileStatus}
               onDismiss={handleDismissBanner}
             />
-          )}
+          )} */}
 
           <div className="flex items-center justify-between mb-6">
             <p className="text-sm text-neutral-600 dark:text-neutral-400">
