@@ -1,22 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { ApplicationPipelineFormData } from "@/types";
+import type { ApplicationPipelineFormData } from "@/types";
 import { jobApplicationPipelineService } from "@/services/recruitment-services";
+import { jobQuestionnaireService } from "@/services/recruitment-services/jobQuestionnaire.service";
 import { useToast } from "@/components/admin/ui/Toast";
 import Navbar from "@/components/careers/Navbar";
 import Footer from "@/components/careers/Footer";
 import { Button } from "@/components/careers/ui/button";
-import { Loader2, ArrowLeft, Send, Sparkles, CheckCircle2 } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/careers/ui/card";
+import { Loader2, ArrowLeft, Send, Sparkles, FileText } from "lucide-react";
 import Link from "next/link";
 
-// Form sections
 import ResumeUploadSection from "./pipeline/ResumeUploadSection";
 import BasicInfoSection from "./pipeline/BasicInfoSection";
+import QuestionnaireSection, {
+  QuestionnaireAnswersState,
+} from "./pipeline/QuestionnaireSection";
 import SkillsSection from "./pipeline/SkillsSection";
 import ExperienceSection from "./pipeline/ExperienceSection";
+import GeneralExperienceSection from "./pipeline/GeneralExperienceSection";
+import SpecificExperienceSection from "./pipeline/SpecificExperienceSection";
 import EducationSection from "./pipeline/EducationSection";
 import PersonalInfoSection from "./pipeline/PersonalInfoSection";
 import PublicationsSection from "./pipeline/PublicationsSection";
@@ -28,6 +39,22 @@ import DocumentsSection from "./pipeline/DocumentsSection";
 import ApplicationDetailsSection from "./pipeline/ApplicationDetailsSection";
 import ConfirmationModal from "./pipeline/ConfirmationModal";
 
+import type {
+  JobApplicationConfigDTO,
+  SectionKey,
+} from "@/types/recruitment/profileRequirements.types";
+import { DEFAULT_SECTION_ORDER } from "@/types/recruitment/profileRequirements.types";
+
+// ─── Helpers ───
+
+/** Normalise any PHP-returned plwd value (0 / 1 / "0" / "1" / bool) to boolean */
+function normalisePlwd(value: unknown): boolean {
+  if (value === true || value === 1 || value === "1") return true;
+  return false;
+}
+
+// ─── Form State 
+
 interface FormState {
   basic: {
     title?: string;
@@ -36,25 +63,9 @@ interface FormState {
     phone?: string;
     portfolioUrl?: string;
   };
-  skills: Array<{ skillName: string; level?: string; yearsOfExp?: number }>;
-  experience: Array<{
-    title: string;
-    company: string;
-    location?: string;
-    startDate: string;
-    endDate?: string;
-    isCurrent?: boolean;
-    description?: string;
-  }>;
-  education: Array<{
-    degree: string;
-    institution: string;
-    fieldOfStudy: string;
-    startDate: string;
-    endDate?: string;
-    isCurrent?: boolean;
-    grade?: string;
-  }>;
+
+  questionnaireAnswers: QuestionnaireAnswersState;
+
   personalInfo: {
     fullName?: string;
     dob?: string;
@@ -64,47 +75,21 @@ interface FormState {
     countyOfOrigin?: string;
     plwd?: boolean;
   };
-  publications: Array<{
-    title: string;
-    type: string;
-    journalOrPublisher?: string;
-    year: number;
-    link?: string;
-  }>;
-  memberships: Array<{
-    bodyName: string;
-    membershipNumber?: string;
-    isActive?: boolean;
-    goodStanding?: boolean;
-  }>;
-  clearances: Array<{
-    type: string;
-    certificateNumber?: string;
-    issueDate: string;
-    expiryDate?: string;
-    status?: "VALID" | "EXPIRED" | "PENDING";
-  }>;
-  courses: Array<{
-    name: string;
-    institution: string;
-    durationWeeks: number;
-    year: number;
-  }>;
-  referees: Array<{
-    name: string;
-    position?: string;
-    organization?: string;
-    phone?: string;
-    email?: string;
-  }>;
+
   coverLetter: string;
   portfolioUrl: string;
   expectedSalary: string;
+  currentSalary?: string;
   availableStartDate: string;
   privacyConsent: boolean;
-  // track uploaded resume url (may differ from profile's existing one)
+
+  coverLetterFileUrl?: string;
+  coverLetterFileName?: string;
+
   resumeUrl?: string;
 }
+
+// ─── Component ─
 
 export default function ApplyJobPipelineContent() {
   const router = useRouter();
@@ -115,32 +100,32 @@ export default function ApplyJobPipelineContent() {
   const jobId = searchParams.get("jobId");
 
   const [loading, setLoading] = useState(true);
+  const [questionnaireLoading, setQuestionnaireLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   const [pipelineData, setPipelineData] = useState<any>(null);
+  const [questionnaireData, setQuestionnaireData] = useState<any>(null);
 
   const [formData, setFormData] = useState<FormState>({
     basic: {},
-    skills: [],
-    experience: [],
-    education: [],
-    personalInfo: {},
-    publications: [],
-    memberships: [],
-    clearances: [],
-    courses: [],
-    referees: [],
+    questionnaireAnswers: {},
+    // Sensible defaults so gender is never undefined on first render
+    personalInfo: { gender: "M", plwd: false },
     coverLetter: "",
     portfolioUrl: "",
     expectedSalary: "",
+    currentSalary: "",
     availableStartDate: "",
     privacyConsent: false,
     resumeUrl: undefined,
+    coverLetterFileUrl: undefined,
+    coverLetterFileName: undefined,
   });
 
-  // Wait for auth to resolve before redirecting
+  // ── Auth guard + initial load 
   useEffect(() => {
-    if (authLoading) return; // don't act while auth is still loading
+    if (authLoading) return;
 
     if (!user || user.role !== "CANDIDATE") {
       router.push(`/login?redirect=/careers-portal/jobs/apply?jobId=${jobId}`);
@@ -157,24 +142,34 @@ export default function ApplyJobPipelineContent() {
       return;
     }
 
-    fetchPipelineData();
+    void loadAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, jobId]);
 
+  const loadAll = async () => {
+    await Promise.all([fetchPipelineData(), fetchQuestionnaire()]);
+  };
+
+  // ── Fetch pipeline / profile snapshot ────────────────────────────────────
   const fetchPipelineData = async () => {
     try {
       setLoading(true);
       const response = await jobApplicationPipelineService.getFormData(jobId!);
+      console.log(
+        "profileSnapshot.user:",
+        response.data?.profileSnapshot?.user,
+      );
 
       if (response.success && response.data) {
         setPipelineData(response.data);
 
-        console.log("Backend requirements:", response.data.requirements);
-
-        // Pre-fill from profile snapshot
         const snapshot = response.data.profileSnapshot;
+        const piSnap = snapshot?.personalInfo;
+
         setFormData((prev) => ({
           ...prev,
           resumeUrl: snapshot?.resumeUrl || undefined,
+
           basic: {
             title: snapshot?.basic?.title || "",
             location: snapshot?.basic?.location || "",
@@ -182,7 +177,23 @@ export default function ApplyJobPipelineContent() {
             phone: snapshot?.user?.phone || "",
             portfolioUrl: snapshot?.basic?.portfolioUrl || "",
           },
+
           portfolioUrl: snapshot?.basic?.portfolioUrl || "",
+
+          // ── NEW: pre-fill personalInfo from snapshot ─────────────────────
+          // Normalise plwd so integer 0 / string "0" never appears as checked
+          personalInfo: piSnap
+            ? {
+                fullName: piSnap.fullName || "",
+                dob: (piSnap.dob || "").slice(0, 10),
+                gender: (piSnap.gender as "M" | "F" | "Other") || "M",
+                idNumber: piSnap.idNumber || "",
+                nationality: piSnap.nationality || "",
+                countyOfOrigin: piSnap.countyOfOrigin || "",
+                plwd: normalisePlwd(piSnap.plwd),
+              }
+            : { gender: "M" as const, plwd: false },
+          // ──
         }));
       }
     } catch (error: any) {
@@ -197,6 +208,66 @@ export default function ApplyJobPipelineContent() {
     }
   };
 
+  // ── Fetch questionnaire ──────
+  const fetchQuestionnaire = async () => {
+    try {
+      setQuestionnaireLoading(true);
+      const res = await jobQuestionnaireService.get(jobId!);
+      if (res.success && res.data) {
+        setQuestionnaireData(res.data);
+      } else {
+        setQuestionnaireData(null);
+      }
+    } catch {
+      setQuestionnaireData(null);
+    } finally {
+      setQuestionnaireLoading(false);
+    }
+  };
+
+  // ── Questionnaire helpers ────
+  const questionnaire =
+    questionnaireData || pipelineData?.questionnaire || null;
+
+  const questionnaireEnabled = !!questionnaire?.enabled;
+  const questionnaireQuestions = (questionnaire?.questions || [])
+    .slice()
+    .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  const validateQuestionnaire = () => {
+    if (!questionnaireEnabled || questionnaireQuestions.length === 0)
+      return true;
+
+    for (const q of questionnaireQuestions) {
+      if (!q.isRequired) continue;
+
+      const a = formData.questionnaireAnswers?.[q.id];
+
+      if (q.type === "YES_NO") {
+        if (!a || a.answerBool === null || a.answerBool === undefined) {
+          showToast({
+            type: "error",
+            title: "Validation Error",
+            message: `Please answer: "${q.questionText}"`,
+          });
+          return false;
+        }
+      } else {
+        const txt = (a?.answerText || "").trim();
+        if (!txt) {
+          showToast({
+            type: "error",
+            title: "Validation Error",
+            message: `Please answer: "${q.questionText}"`,
+          });
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  // ── Pre-submit validation ────
   const handlePreSubmit = () => {
     if (!formData.coverLetter || formData.coverLetter.length < 150) {
       showToast({
@@ -222,6 +293,15 @@ export default function ApplyJobPipelineContent() {
       });
       return;
     }
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (formData.availableStartDate < todayStr) {
+      showToast({
+        type: "error",
+        title: "Validation Error",
+        message: "Available start date cannot be in the past",
+      });
+      return;
+    }
     if (!formData.privacyConsent) {
       showToast({
         type: "error",
@@ -230,23 +310,39 @@ export default function ApplyJobPipelineContent() {
       });
       return;
     }
+
+    if (!validateQuestionnaire()) return;
+
     setShowConfirmModal(true);
   };
 
+  // ── Confirmed submit ─────────
   const handleConfirmedSubmit = async () => {
     setShowConfirmModal(false);
 
     try {
       setSubmitting(true);
 
+      const questionnaireAnswersPayload =
+        questionnaireEnabled && questionnaireQuestions.length > 0
+          ? questionnaireQuestions.map((q: any) => {
+              const a = formData.questionnaireAnswers?.[q.id];
+              return {
+                questionId: q.id,
+                type: q.type,
+                answerText:
+                  q.type === "OPEN_ENDED" ? (a?.answerText || "").trim() : null,
+                answerBool:
+                  q.type === "YES_NO" ? (a?.answerBool ?? null) : null,
+              };
+            })
+          : undefined;
+
+      // Lightweight payload: profile sections are already saved silently
       const payload: ApplicationPipelineFormData = {
         jobId: jobId!,
         basic: formData.basic,
-        skills: formData.skills.length > 0 ? formData.skills : undefined,
-        experience:
-          formData.experience.length > 0 ? formData.experience : undefined,
-        education:
-          formData.education.length > 0 ? formData.education : undefined,
+
         personalInfo: formData.personalInfo.fullName
           ? {
               fullName: formData.personalInfo.fullName!,
@@ -255,20 +351,18 @@ export default function ApplyJobPipelineContent() {
               idNumber: formData.personalInfo.idNumber!,
               nationality: formData.personalInfo.nationality!,
               countyOfOrigin: formData.personalInfo.countyOfOrigin!,
-              plwd: formData.personalInfo.plwd,
+              // Ensure we always send a real boolean — never undefined
+              plwd: formData.personalInfo.plwd === true,
             }
           : undefined,
-        publications:
-          formData.publications.length > 0 ? formData.publications : undefined,
-        memberships:
-          formData.memberships.length > 0 ? formData.memberships : undefined,
-        clearances:
-          formData.clearances.length > 0 ? formData.clearances : undefined,
-        courses: formData.courses.length > 0 ? formData.courses : undefined,
-        referees: formData.referees.length > 0 ? formData.referees : undefined,
+
+        questionnaireAnswers: questionnaireAnswersPayload,
+
         coverLetter: formData.coverLetter,
+        coverLetterFileUrl: formData.coverLetterFileUrl, // snapshot-only usage
         portfolioUrl: formData.portfolioUrl,
         expectedSalary: formData.expectedSalary,
+        currentSalary: formData.currentSalary,
         availableStartDate: formData.availableStartDate,
         privacyConsent: formData.privacyConsent,
       };
@@ -300,8 +394,23 @@ export default function ApplyJobPipelineContent() {
     }
   };
 
-  //Show loading spinner while auth OR pipeline data is loading
-  if (authLoading || loading) {
+  // ── Section ordering ─────────
+  const applicationConfig: JobApplicationConfigDTO | null =
+    pipelineData?.applicationConfig || null;
+
+  const orderedSections: SectionKey[] = useMemo(() => {
+    const order = applicationConfig?.sectionOrder?.length
+      ? applicationConfig.sectionOrder
+      : DEFAULT_SECTION_ORDER;
+
+    // Filter out questionnaire if not enabled
+    return order.filter((k) =>
+      k === "questionnaire" ? questionnaireEnabled : true,
+    );
+  }, [applicationConfig, questionnaireEnabled]);
+
+  // ── Loading state ────────────
+  if (authLoading || loading || questionnaireLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-white dark:bg-neutral-950">
         <Navbar />
@@ -309,8 +418,8 @@ export default function ApplyJobPipelineContent() {
           <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
             {authLoading
-              ? "Checking authentication..."
-              : "Loading application form..."}
+              ? "Checking authentication…"
+              : "Loading application form…"}
           </p>
         </div>
         <Footer />
@@ -318,6 +427,7 @@ export default function ApplyJobPipelineContent() {
     );
   }
 
+  // ── Derived display flags ────
   const missingKeys = pipelineData?.requirements || [];
   const coreSections = [
     "BASIC_TITLE",
@@ -334,13 +444,20 @@ export default function ApplyJobPipelineContent() {
     effectiveMissingKeys.includes("BASIC_BIO") ||
     effectiveMissingKeys.includes("BASIC_PHONE");
 
+  const showJobDescription =
+    !!applicationConfig?.showDescription && !!pipelineData?.job?.description;
+
+  // Convenience snapshot pointer for initial items
+  const snap = pipelineData?.profileSnapshot;
+
+  // ──────────
   return (
     <div className="min-h-screen flex flex-col bg-neutral-50 dark:bg-neutral-950">
       <Navbar />
 
       <main className="flex-1 py-8 sm:py-12">
         <div className="container mx-auto px-4 max-w-3xl">
-          {/* Back Button */}
+          {/* Back button */}
           <Button
             asChild
             variant="ghost"
@@ -352,7 +469,7 @@ export default function ApplyJobPipelineContent() {
             </Link>
           </Button>
 
-          {/* Page Header */}
+          {/* Page header */}
           <div className="mb-8">
             <div className="flex items-start gap-4">
               <div className="p-3 bg-linear-to-r from-primary-500 to-orange-500 rounded-xl shrink-0">
@@ -363,44 +480,15 @@ export default function ApplyJobPipelineContent() {
                   Apply for {pipelineData?.job?.title}
                 </h1>
                 <p className="text-neutral-600 dark:text-neutral-400 mt-1 text-sm">
-                  Complete the sections below. Pre-filled from your existing
-                  profile.
+                  Sections auto-save as you add information. Most of your
+                  profile may already be pre-filled.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Eligibility Banner */}
-          {/* {pipelineData?.eligibility && (
-            <div className="mb-6 p-4 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                  Profile Completion
-                </span>
-                <span className="text-sm font-bold text-primary-600">
-                  {pipelineData.eligibility.completionPercentage ?? 0}%
-                </span>
-              </div>
-              <div className="h-2 bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-linear-to-r from-primary-500 to-orange-500 rounded-full transition-all duration-500"
-                  style={{ width: `${pipelineData.eligibility.completionPercentage ?? 0}%` }}
-                />
-              </div>
-              {pipelineData.eligibility.isEligible && (
-                <div className="flex items-center gap-2 mt-2">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                  <span className="text-xs text-green-700 dark:text-green-300 font-medium">
-                    You meet all requirements for this position
-                  </span>
-                </div>
-              )}
-            </div>
-          )} */}
-
-          {/* Form Sections Stack */}
           <div className="space-y-5">
-            {/* ① Resume Upload — ALWAYS at top */}
+            {/* ── Always first: Resume ── */}
             <ResumeUploadSection
               resumeUrl={formData.resumeUrl}
               onResumeUploaded={(url) =>
@@ -408,146 +496,224 @@ export default function ApplyJobPipelineContent() {
               }
             />
 
-            {/* ② Basic Info */}
+            {/* ── Job description (config controlled) ── */}
+            {showJobDescription && (
+              <Card className="border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary-500" />
+                    Job Description
+                  </CardTitle>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+                    Read the full job description while completing your
+                    application
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    {/* Render as plain text to avoid XSS risks */}
+                    <pre className="whitespace-pre-wrap text-sm text-neutral-700 dark:text-neutral-300">
+                      {pipelineData?.job?.description}
+                    </pre>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* ── Basic info (conditionally shown) ── */}
             {showBasic && (
               <BasicInfoSection
                 data={formData.basic}
-                onChange={(basic) => setFormData({ ...formData, basic })}
+                onChange={(basic) =>
+                  setFormData((prev) => ({ ...prev, basic }))
+                }
                 missingKeys={effectiveMissingKeys}
               />
             )}
 
-            {/* ③ Skills */}
-            {effectiveMissingKeys.includes("SKILLS") && (
-              <SkillsSection
-                data={formData.skills}
-                onChange={(skills) => setFormData({ ...formData, skills })}
-                existingSkills={pipelineData?.profileSnapshot?.skills || []}
-              />
-            )}
+            {/* ── Ordered middle sections ── */}
+            {orderedSections.map((sk) => {
+              switch (sk) {
+                // ── Questionnaire ───────────────────────────────────────────
+                case "questionnaire":
+                  return questionnaireEnabled &&
+                    questionnaireQuestions.length > 0 ? (
+                    <QuestionnaireSection
+                      key={sk}
+                      title={
+                        questionnaire?.questionnaire?.title ||
+                        "Screening Questions"
+                      }
+                      description={
+                        questionnaire?.questionnaire?.description || null
+                      }
+                      questions={questionnaireQuestions}
+                      answers={formData.questionnaireAnswers}
+                      onChange={(next) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          questionnaireAnswers: next,
+                        }))
+                      }
+                    />
+                  ) : null;
 
-            {/* ④ Experience */}
-            {effectiveMissingKeys.includes("EXPERIENCE") && (
-              <ExperienceSection
-                data={formData.experience}
-                onChange={(experience) =>
-                  setFormData({ ...formData, experience })
-                }
-                existingExperience={
-                  pipelineData?.profileSnapshot?.experience || []
-                }
-              />
-            )}
+                // ── Skills ─────
+                case "skills":
+                  return effectiveMissingKeys.includes("SKILLS") ? (
+                    <SkillsSection
+                      key={sk}
+                      initialSkills={snap?.skills || []}
+                    />
+                  ) : null;
 
-            {/* ⑤ Education */}
-            {effectiveMissingKeys.includes("EDUCATION") && (
-              <EducationSection
-                data={formData.education}
-                onChange={(education) =>
-                  setFormData({ ...formData, education })
-                }
-                existingEducation={
-                  pipelineData?.profileSnapshot?.education || []
-                }
-              />
-            )}
+                // ── General experience ───────────────────────────────────────
+                case "experience_general":
+                  return applicationConfig?.showGeneralExperience ||
+                    effectiveMissingKeys.includes("EXPERIENCE") ? (
+                    <GeneralExperienceSection
+                      key={sk}
+                      initialExperience={snap?.experience || []}
+                      description={
+                        applicationConfig?.generalExperienceText || ""
+                      }
+                    />
+                  ) : null;
 
-            {/* ⑥ Personal Info */}
-            {effectiveMissingKeys.includes("PERSONAL_INFO") && (
-              <PersonalInfoSection
-                data={formData.personalInfo}
-                onChange={(personalInfo) =>
-                  setFormData({ ...formData, personalInfo })
-                }
-              />
-            )}
+                // ── Specific experience ──────────────────────────────────────
+                case "experience_specific":
+                  return applicationConfig?.showSpecificExperience ? (
+                    <SpecificExperienceSection
+                      key={sk}
+                      initialExperience={snap?.experience || []}
+                      description={
+                        applicationConfig?.specificExperienceText || ""
+                      }
+                    />
+                  ) : null;
 
-            {/* ⑦ Compliance Sections */}
-            {effectiveMissingKeys.includes("PUBLICATIONS") && (
-              <PublicationsSection
-                data={formData.publications}
-                onChange={(publications) =>
-                  setFormData({ ...formData, publications })
-                }
-                existingPublications={
-                  pipelineData?.profileSnapshot?.publications || []
-                }
-              />
-            )}
+                // ── Education ──
+                case "education":
+                  return effectiveMissingKeys.includes("EDUCATION") ? (
+                    <EducationSection
+                      key={sk}
+                      initialEducation={snap?.education || []}
+                      requiredEducationLevels={
+                        applicationConfig?.requiredEducationLevels || []
+                      }
+                    />
+                  ) : null;
 
-            {effectiveMissingKeys.includes("MEMBERSHIPS") && (
-              <MembershipsSection
-                data={formData.memberships}
-                onChange={(memberships) =>
-                  setFormData({ ...formData, memberships })
-                }
-                existingMemberships={
-                  pipelineData?.profileSnapshot?.memberships || []
-                }
-              />
-            )}
+                // ── Personal info ────────────────────────────────────────────
+                // NEW: passes userFirstName/userLastName and pre-filled data
+                case "personal_info":
+                  return effectiveMissingKeys.includes("PERSONAL_INFO") ? (
+                    <PersonalInfoSection
+                      key={sk}
+                      data={formData.personalInfo}
+                      onChange={(personalInfo) =>
+                        setFormData((prev) => ({ ...prev, personalInfo }))
+                      }
+                      userFirstName={snap?.user?.firstName || ""}
+                      userLastName={snap?.user?.lastName || ""}
+                    />
+                  ) : null;
 
-            {effectiveMissingKeys.includes("CLEARANCES") && (
-              <ClearancesSection
-                data={formData.clearances}
-                onChange={(clearances) =>
-                  setFormData({ ...formData, clearances })
-                }
-                existingClearances={
-                  pipelineData?.profileSnapshot?.clearances || []
-                }
-              />
-            )}
+                // ── Publications 
+                case "publications":
+                  return effectiveMissingKeys.includes("PUBLICATIONS") ? (
+                    <PublicationsSection
+                      key={sk}
+                      initialPublications={snap?.publications || []}
+                    />
+                  ) : null;
 
-            {effectiveMissingKeys.includes("COURSES") && (
-              <CoursesSection
-                data={formData.courses}
-                onChange={(courses) => setFormData({ ...formData, courses })}
-                existingCourses={pipelineData?.profileSnapshot?.courses || []}
-              />
-            )}
+                // ── Memberships ─
+                case "memberships":
+                  return effectiveMissingKeys.includes("MEMBERSHIPS") ? (
+                    <MembershipsSection
+                      key={sk}
+                      initialMemberships={snap?.memberships || []}
+                    />
+                  ) : null;
 
-            {effectiveMissingKeys.includes("REFEREES") && (
-              <RefereesSection
-                data={formData.referees}
-                onChange={(referees) => setFormData({ ...formData, referees })}
-                existingReferees={pipelineData?.profileSnapshot?.referees || []}
-              />
-            )}
+                // ── Clearances ──
+                case "clearances":
+                  return effectiveMissingKeys.includes("CLEARANCES") ? (
+                    <ClearancesSection
+                      key={sk}
+                      initialClearances={snap?.clearances || []}
+                    />
+                  ) : null;
 
-            {/* ⑧ Documents */}
-            {(effectiveMissingKeys.includes("DOCUMENT_NATIONAL_ID") ||
-              effectiveMissingKeys.includes("DOCUMENT_ACADEMIC_CERT") ||
-              effectiveMissingKeys.includes("DOCUMENT_PROFESSIONAL_CERT")) && (
-              <DocumentsSection
-                missingKeys={effectiveMissingKeys}
-                existingFiles={pipelineData?.profileSnapshot?.files || []}
-              />
-            )}
+                // ── Courses ─────
+                case "courses":
+                  return effectiveMissingKeys.includes("COURSES") ? (
+                    <CoursesSection
+                      key={sk}
+                      initialCourses={snap?.courses || []}
+                    />
+                  ) : null;
 
-            {/* ⑨ Application Details — ALWAYS last */}
+                // ── Referees ────
+                case "referees":
+                  return effectiveMissingKeys.includes("REFEREES") ? (
+                    <RefereesSection
+                      key={sk}
+                      initialReferees={snap?.referees || []}
+                      refereesRequired={
+                        applicationConfig?.refereesRequired ?? 0
+                      }
+                      required={true}
+                    />
+                  ) : null;
+
+                // ── Documents ───
+                // CHANGED: always render — DocumentsSection itself handles which
+                // required docs to show, and ALWAYS shows "Other Documents".
+                case "documents":
+                  return (
+                    <DocumentsSection
+                      key={sk}
+                      missingKeys={effectiveMissingKeys}
+                      existingFiles={snap?.files || []}
+                    />
+                  );
+
+                default:
+                  return null;
+              }
+            })}
+
+            {/* ── Always last: application details ── */}
             <ApplicationDetailsSection
               data={{
                 coverLetter: formData.coverLetter,
+                coverLetterFileUrl: formData.coverLetterFileUrl,
+                coverLetterFileName: formData.coverLetterFileName,
                 portfolioUrl: formData.portfolioUrl,
                 expectedSalary: formData.expectedSalary,
+                currentSalary: formData.currentSalary,
                 availableStartDate: formData.availableStartDate,
                 privacyConsent: formData.privacyConsent,
               }}
               onChange={(details) =>
-                setFormData({
-                  ...formData,
+                setFormData((prev) => ({
+                  ...prev,
                   coverLetter: details.coverLetter,
+                  coverLetterFileUrl: details.coverLetterFileUrl,
+                  coverLetterFileName: details.coverLetterFileName,
                   portfolioUrl: details.portfolioUrl,
                   expectedSalary: details.expectedSalary,
+                  currentSalary: details.currentSalary,
                   availableStartDate: details.availableStartDate,
                   privacyConsent: details.privacyConsent,
-                })
+                }))
               }
               resumeUrl={formData.resumeUrl}
             />
 
-            {/* Submit Button */}
+            {/* ── Submit button ── */}
             <Button
               onClick={handlePreSubmit}
               disabled={submitting}
@@ -556,12 +722,12 @@ export default function ApplyJobPipelineContent() {
               {submitting ? (
                 <>
                   <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Submitting...
+                  Submitting…
                 </>
               ) : (
                 <>
                   <Send className="h-5 w-5 mr-2" />
-                  Review & Submit Application
+                  Review &amp; Submit Application
                 </>
               )}
             </Button>
