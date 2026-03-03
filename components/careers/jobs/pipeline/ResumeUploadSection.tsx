@@ -138,7 +138,7 @@ export default function ResumeUploadSection({ resumeUrl, onResumeUploaded }: Pro
           Resume / CV <span className="text-red-500">*</span>
         </CardTitle>
         <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-          Upload your resume (PDF, DOC, DOCX - Max 5MB)
+          Upload your resume (PDF, DOC, DOCX - Max 2MB)
         </p>
       </CardHeader>
       
@@ -186,7 +186,7 @@ export default function ResumeUploadSection({ resumeUrl, onResumeUploaded }: Pro
                   {resumeUrl ? "Upload New Resume" : "Upload Resume"}
                 </span>
                 <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                  PDF, DOC or DOCX (max. 5MB)
+                  PDF, DOC or DOCX (max. 2MB)
                 </span>
               </div>
             </Button>
