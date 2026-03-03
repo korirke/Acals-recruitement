@@ -39,7 +39,7 @@ import Footer from "@/components/careers/Footer";
 import type { ApplicationStatus } from "@/types";
 import { normalizeImageUrl } from "@/lib/imageUtils";
 
-// ─── Active vs Archive buckets ─────────────────────────────────────────────
+// ─── Active vs Archive buckets
 const activeStatuses: ApplicationStatus[] = [
   "PENDING",
   "REVIEWED",
@@ -72,7 +72,7 @@ export default function ApplicationsPage() {
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  // ─── Auth guard ────────────────────────────────────────────────────────
+  // Auth guard
   useEffect(() => {
     if (authLoading) return;
     if (!isAuthenticated) {
@@ -92,7 +92,7 @@ export default function ApplicationsPage() {
     }
   }, [initialLoadComplete, isAuthenticated, user?.role, fetchApplications]);
 
-  // ─── Withdraw ──────────────────────────────────────────────────────────
+  // ─── Withdraw
   const handleWithdraw = async () => {
     if (!withdrawingId) return;
     try {
@@ -105,7 +105,7 @@ export default function ApplicationsPage() {
     }
   };
 
-  // ─── Helpers ───────────────────────────────────────────────────────────
+  // ─── Helpers ─
   const formatDate = (dateString: string) => {
     if (!dateString || dateString === "0000-00-00 00:00:00.000") return "N/A";
     try {
@@ -128,7 +128,7 @@ export default function ApplicationsPage() {
     }).format(amount);
   };
 
-  // ─── Filtered list ─────────────────────────────────────────────────────
+  // ─── Filtered list
   const filteredApplications = applications.filter((app) => {
     const matchesSearch =
       app.job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -144,14 +144,14 @@ export default function ApplicationsPage() {
   });
 
   const activeCount = applications.filter((app) =>
-    activeStatuses.includes(app.status as ApplicationStatus)
+    activeStatuses.includes(app.status as ApplicationStatus),
   ).length;
 
   const archiveCount = applications.filter((app) =>
-    archiveStatuses.includes(app.status as ApplicationStatus)
+    archiveStatuses.includes(app.status as ApplicationStatus),
   ).length;
 
-  // ─── Loading ───────────────────────────────────────────────────────────
+  // ─── Loading ─
   if (authLoading || (loading && !initialLoadComplete)) {
     return (
       <div className="min-h-screen bg-linear-to-br from-neutral-50 to-neutral-100 dark:from-neutral-950 dark:to-neutral-900 flex items-center justify-center">
@@ -172,8 +172,7 @@ export default function ApplicationsPage() {
       <Navbar />
 
       <main className="container mx-auto px-4 py-8 max-w-5xl">
-
-        {/* ── Page Header ────────────────────────────────────────────── */}
+        {/* ── Page Header ─*/}
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold text-neutral-900 dark:text-white">
             My Applications
@@ -218,7 +217,7 @@ export default function ApplicationsPage() {
           </Card>
         </div>
 
-        {/* ── Tabs + Search ───────────────────────────────────────────── */}
+        {/* ── Tabs + Search */}
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           {/* Active / Archive toggle */}
           <div className="flex gap-1.5 bg-neutral-100 dark:bg-neutral-800 p-1 rounded-xl shrink-0">
@@ -256,16 +255,18 @@ export default function ApplicationsPage() {
           </div>
         </div>
 
-        {/* ── Applications List ───────────────────────────────────────── */}
+        {/* ── Applications List  */}
         {filteredApplications.length > 0 ? (
           <div className="space-y-4">
             {filteredApplications.map((application) => {
               const canWithdraw = ["PENDING", "REVIEWED"].includes(
-                application.status
+                application.status,
               );
 
               // ACCEPTED → archive with success treatment
               const isAccepted = application.status === "ACCEPTED";
+              const isWithdrawn = application.status === "WITHDRAWN";
+              const isOffered = application.status === "OFFERED";
 
               return (
                 <Card
@@ -274,13 +275,14 @@ export default function ApplicationsPage() {
                 >
                   <CardContent className="p-5 sm:p-6">
                     <div className="flex flex-col sm:flex-row gap-5">
-
                       {/* Company Logo */}
                       <div className="shrink-0">
                         <div className="w-14 h-14 bg-neutral-100 dark:bg-neutral-800 rounded-xl flex items-center justify-center overflow-hidden">
                           {application.job.company.logo ? (
                             <img
-                              src={normalizeImageUrl(application.job.company.logo)}
+                              src={normalizeImageUrl(
+                                application.job.company.logo,
+                              )}
                               alt={application.job.company.name}
                               className="w-full h-full object-cover"
                             />
@@ -292,7 +294,6 @@ export default function ApplicationsPage() {
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
-
                         {/* Top Row: Title + Status Badge */}
                         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
                           <div className="flex-1 min-w-0">
@@ -307,10 +308,15 @@ export default function ApplicationsPage() {
                               {application.job.company.location && (
                                 <div className="flex items-center gap-1.5">
                                   <MapPin className="w-3.5 h-3.5 shrink-0" />
-                                  <span>{application.job.company.location}</span>
+                                  <span>
+                                    {application.job.company.location}
+                                  </span>
                                 </div>
                               )}
-                              <Badge variant="outline" className="text-xs px-2 py-0">
+                              <Badge
+                                variant="outline"
+                                className="text-xs px-2 py-0"
+                              >
                                 {application.job.category.name}
                               </Badge>
                             </div>
@@ -327,6 +333,32 @@ export default function ApplicationsPage() {
                                 </span>
                                 <span className="text-xs text-emerald-600 dark:text-emerald-400 opacity-80">
                                   Application accepted
+                                </span>
+                              </div>
+                            </div>
+                          ) : isWithdrawn ? (
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 shrink-0">
+                              <div className="w-2 h-2 rounded-full bg-neutral-400" />
+                              <XCircle className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+                              <div className="flex flex-col">
+                                <span className="text-sm font-semibold text-neutral-600 dark:text-neutral-300">
+                                  Withdrawn
+                                </span>
+                                <span className="text-xs text-neutral-500 dark:text-neutral-400 opacity-80">
+                                  Application withdrawn
+                                </span>
+                              </div>
+                            </div>
+                          ) : isOffered ? (
+                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 shrink-0">
+                              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                              <CheckCircle2 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                              <div className="flex flex-col">
+                                <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                                  Offer Received
+                                </span>
+                                <span className="text-xs text-amber-600 dark:text-amber-400 opacity-80">
+                                  Review your offer
                                 </span>
                               </div>
                             </div>
@@ -350,13 +382,16 @@ export default function ApplicationsPage() {
                         <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-neutral-500 dark:text-neutral-400 mb-4">
                           <div className="flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5" />
-                            <span>Applied {formatDate(application.appliedAt)}</span>
+                            <span>
+                              Applied {formatDate(application.appliedAt)}
+                            </span>
                           </div>
                           {application.expectedSalary && (
                             <div className="flex items-center gap-1.5">
                               <TrendingUp className="w-3.5 h-3.5" />
                               <span>
-                                Expected: {formatSalary(application.expectedSalary)}
+                                Expected:{" "}
+                                {formatSalary(application.expectedSalary)}
                               </span>
                             </div>
                           )}
@@ -379,7 +414,7 @@ export default function ApplicationsPage() {
 
                         {/*
                           STATUS TIMELINE — hidden from candidates temporarily
-                          ──────────────────────────────────────────────────────
+                          ─────────────
                           {application.statusHistory && application.statusHistory.length > 0 && (
                             <div className="border-t border-neutral-200 dark:border-neutral-800 pt-4 mb-4">
                               <div className="flex items-center gap-2 mb-3">
@@ -414,8 +449,8 @@ export default function ApplicationsPage() {
                         {/* ── Action Buttons ─────────────────────────── */}
                         <div className="flex flex-wrap gap-2">
                           {/*
-                            VIEW DETAILS — commented out temporarily
-                            ─────────────────────────────────────────────
+                            VIEW DETAILS —temporarily
+                            ────
                             <Button asChild variant="default" size="sm" className="gap-2">
                               <Link href={`/careers-portal/applications/detail?id=${application.id}`}>
                                 <Eye className="w-4 h-4" />
@@ -424,15 +459,27 @@ export default function ApplicationsPage() {
                             </Button>
                           */}
 
-                          <Button asChild variant="outline" size="sm" className="gap-2 h-9">
-                            <Link href={`/careers-portal/jobs/job-detail?id=${application.job.id}`}>
+                          <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 h-9"
+                          >
+                            <Link
+                              href={`/careers-portal/jobs/job-detail?id=${application.job.id}`}
+                            >
                               <ExternalLink className="w-3.5 h-3.5" />
                               View Job
                             </Link>
                           </Button>
 
                           {application.resumeUrl && (
-                            <Button asChild variant="outline" size="sm" className="gap-2 h-9">
+                            <Button
+                              asChild
+                              variant="outline"
+                              size="sm"
+                              className="gap-2 h-9"
+                            >
                               <a
                                 href={application.resumeUrl}
                                 target="_blank"
@@ -459,7 +506,6 @@ export default function ApplicationsPage() {
                             </Button>
                           )}
                         </div>
-
                       </div>
                     </div>
                   </CardContent>
@@ -468,7 +514,7 @@ export default function ApplicationsPage() {
             })}
           </div>
         ) : (
-          /* ── Empty State ─────────────────────────────────────────── */
+          /* ── Empty State ── */
           <Card className="border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
             <CardContent className="flex flex-col items-center justify-center py-16 px-4">
               <div className="w-20 h-20 bg-neutral-100 dark:bg-neutral-800 rounded-full flex items-center justify-center mb-5">
@@ -482,15 +528,15 @@ export default function ApplicationsPage() {
                 {searchQuery
                   ? "No Results Found"
                   : viewMode === "active"
-                  ? "No Active Applications"
-                  : "Archive is Empty"}
+                    ? "No Active Applications"
+                    : "Archive is Empty"}
               </h3>
               <p className="text-sm text-neutral-500 dark:text-neutral-400 text-center mb-6 max-w-sm">
                 {searchQuery
                   ? "Try adjusting your search to find what you're looking for"
                   : viewMode === "active"
-                  ? "You haven't applied to any jobs yet. Browse open positions to get started."
-                  : "Completed or withdrawn applications will appear here"}
+                    ? "You haven't applied to any jobs yet. Browse open positions to get started."
+                    : "Completed or withdrawn applications will appear here"}
               </p>
               {!searchQuery && viewMode === "active" && (
                 <Button asChild>
@@ -508,7 +554,10 @@ export default function ApplicationsPage() {
       <Footer />
 
       {/* ── Withdraw Confirmation Dialog ──────────────────────────────── */}
-      <AlertDialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
+      <AlertDialog
+        open={showWithdrawDialog}
+        onOpenChange={setShowWithdrawDialog}
+      >
         <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
             <div className="flex items-center gap-3 mb-1">
