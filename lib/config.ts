@@ -27,7 +27,7 @@ export const config = {
   isProd: process.env.NODE_ENV === "production",
 
   // API Timeout
-  apiTimeout: 20000, // 20 seconds
+  apiTimeout: 50000, // 20 seconds
 
   // Token Configuration
   tokenKey: "fortune_admin_token",
