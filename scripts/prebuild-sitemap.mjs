@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const SITE_URL = 'https://fortunekenya.com';
-const API_BASE = 'https://fortunekenya.com/v1/api';
+const API_BASE = 'https://fortunekenya.com/v2/api';
 
 const staticPaths = [
   { path: "/", priority: 1.0, changefreq: 'daily' },
