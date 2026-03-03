@@ -30,7 +30,7 @@ import { candidateService } from "@/services/recruitment-services";
 import { useToast } from "@/components/admin/ui/Toast";
 
 const MIN_COVER_LETTER = 150;
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_TYPES = [
   "application/pdf",
   "application/msword",
@@ -75,7 +75,7 @@ export default function ApplicationDetailsSection({
       return "Invalid file type. Only PDF, DOC, and DOCX files are allowed.";
     }
     if (file.size > MAX_FILE_SIZE) {
-      return "File size exceeds 5MB limit.";
+      return "File size exceeds 2MB limit.";
     }
     return null;
   };
@@ -189,10 +189,10 @@ export default function ApplicationDetailsSection({
             <div>
               <p className="text-sm font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
                 <Paperclip className="h-4 w-4 text-primary-500" />
-                Upload Cover Letter (Optional)
+                Upload Cover Letter
               </p>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                PDF, DOC or DOCX (max 5MB). You can upload OR paste text below.
+                PDF, DOC or DOCX (max 2MB). You can upload OR paste text below.
               </p>
             </div>
 
