@@ -1,8 +1,21 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/careers/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/careers/ui/card";
 import { Button } from "@/components/careers/ui/button";
-import { Settings as SettingsIcon, Globe, FileText, Mail, Users2 } from "lucide-react";
+import {
+  Settings as SettingsIcon,
+  Globe,
+  FileText,
+  Mail,
+  Users2,
+  GraduationCap,
+} from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 
@@ -16,6 +29,23 @@ export default function Settings() {
       icon: Globe,
       href: "/recruitment-portal/settings/site",
       color: "text-blue-600 dark:text-blue-400",
+      show: true,
+    },
+    {
+      title: "Candidate Profile Config",
+      description:
+        "Control which candidate profile fields/sections are visible or required",
+      icon: Users2,
+      href: "/recruitment-portal/settings/candidate-profile",
+      color: "text-rose-600 dark:text-rose-400",
+      show: user?.role === "SUPER_ADMIN",
+    },
+    {
+      title: "Education Levels",
+      description: "Manage education qualification levels",
+      icon: GraduationCap,
+      href: "/recruitment-portal/settings/education-levels",
+      color: "text-amber-600 dark:text-amber-400",
       show: true,
     },
     {
@@ -42,14 +72,6 @@ export default function Settings() {
       color: "text-orange-600 dark:text-orange-400",
       show: true,
     },
-    {
-      title: "Candidate Profile Config",
-      description: "Control which candidate profile fields/sections are visible or required",
-      icon: Users2,
-      href: "/recruitment-portal/settings/candidate-profile",
-      color: "text-rose-600 dark:text-rose-400",
-      show: user?.role === "SUPER_ADMIN",
-    },
   ].filter((x) => x.show);
 
   return (
@@ -74,7 +96,9 @@ export default function Settings() {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                    <div className={`p-1.5 sm:p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 ${category.color} shrink-0`}>
+                    <div
+                      className={`p-1.5 sm:p-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 ${category.color} shrink-0`}
+                    >
                       <category.icon className="h-5 w-5 sm:h-6 sm:w-6" />
                     </div>
                     <CardTitle className="text-base sm:text-lg truncate">
