@@ -73,6 +73,11 @@ function asArray<T>(v: any): T[] {
   return Array.isArray(v) ? v : [];
 }
 
+function normalisePlwd(value: unknown): boolean {
+  if (value === true || value === 1 || value === "1") return true;
+  return false;
+}
+
 function s(v: any, fallback = "N/A"): string {
   if (v === null || v === undefined) return fallback;
   if (typeof v === "string" && v.trim() === "") return fallback;
@@ -834,7 +839,7 @@ export default function ApplicationDetail() {
                           icon={<Shield className="h-4 w-4" />}
                           label="PLWD"
                           value={
-                            personalInfo.plwd ? (
+                            normalisePlwd(personalInfo.plwd) ? (
                               <StatusPill value="Y" />
                             ) : (
                               <StatusPill value="N" />
