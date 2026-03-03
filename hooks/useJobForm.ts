@@ -10,8 +10,10 @@ const DEFAULT_FORM_DATA: CreateJobDto = {
   description: "",
   responsibilities: "",
   requirements: "",
+  keySkillsAndCompetencies: "",
   benefits: "",
   niceToHave: "",
+  jdDocumentUrl: undefined,
   type: "FULL_TIME",
   experienceLevel: "MID_LEVEL",
   location: "",
@@ -42,8 +44,12 @@ function normalizeForApi(dto: CreateJobDto): any {
   // Optional long fields -> null if empty
   out.responsibilities = String(out.responsibilities ?? "").trim() || null;
   out.requirements = String(out.requirements ?? "").trim() || null;
+  out.keySkillsAndCompetencies =
+    String(out.keySkillsAndCompetencies ?? "").trim() || null;
   out.benefits = String(out.benefits ?? "").trim() || null;
   out.niceToHave = String(out.niceToHave ?? "").trim() || null;
+
+  out.jdDocumentUrl = String(out.jdDocumentUrl ?? "").trim() || null;
 
   // expiresAt is optional
   if (out.expiresAt === "") out.expiresAt = null;

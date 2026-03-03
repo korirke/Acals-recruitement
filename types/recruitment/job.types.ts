@@ -30,8 +30,10 @@ export interface Job {
   description: string;
   responsibilities?: string;
   requirements?: string;
+  keySkillsAndCompetencies?: string;
   benefits?: string;
   niceToHave?: string;
+  jdDocumentUrl?: string;
   type: JobType;
   experienceLevel: ExperienceLevel;
   location: string;
@@ -117,8 +119,10 @@ export interface CreateJobDto {
   description: string;
   responsibilities?: string;
   requirements?: string;
+  keySkillsAndCompetencies?: string;
   benefits?: string;
   niceToHave?: string;
+  jdDocumentUrl?: string;
   type: JobType;
   experienceLevel: ExperienceLevel;
   location: string;

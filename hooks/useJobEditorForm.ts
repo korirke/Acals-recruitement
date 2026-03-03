@@ -12,8 +12,10 @@ const DEFAULTS: CreateJobDto = {
   description: "",
   responsibilities: "",
   requirements: "",
+  keySkillsAndCompetencies: "",
   benefits: "",
   niceToHave: "",
+  jdDocumentUrl: undefined,
   type: "FULL_TIME",
   experienceLevel: "MID_LEVEL",
   location: "",
@@ -80,7 +82,6 @@ export function useJobEditorForm(initial?: Partial<CreateJobDto>) {
     (mode: EditorMode, userRole?: string) => {
       const e: JobEditorErrors = {};
 
-      // Draft: title only (backend expectation)
       if (!data.title?.trim()) e.title = "Job title is required";
       else if (data.title.trim().length < 3)
         e.title = "Job title must be at least 3 characters";
