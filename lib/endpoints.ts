@@ -165,6 +165,7 @@ export const ENDPOINTS = {
     MODERATION_QUEUE: "/jobs/admin/moderation-queue",
     MODERATE: (id: string) => `/jobs/${id}/moderate`,
     BULK_STATUS: "/jobs/admin/bulk-status",
+    QUESTIONNAIRE: (jobId: string) => `/jobs/${jobId}/questionnaire`,
   },
 
   APPLICATIONS: {
