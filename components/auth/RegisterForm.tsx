@@ -94,7 +94,7 @@ export function RegisterForm() {
       showToast({
         type: 'success',
         title: 'Account Created!',
-        message: 'Please check your email to verify your account.',
+        message: 'Please proceed to login.',
       });
     } catch (err: any) {
       const errorMessage = err.message || "Registration failed. Please try again.";
