@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
@@ -18,6 +18,11 @@ export default function SelectPortalPage() {
   const { user, loading, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -27,7 +32,7 @@ export default function SelectPortalPage() {
     }
   }, [user, loading, router]);
 
-  if (loading) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white dark:bg-neutral-950">
         <div className="w-5 h-5 border border-neutral-300 dark:border-neutral-700 border-t-neutral-900 dark:border-t-white rounded-full animate-spin" />
@@ -46,6 +51,15 @@ export default function SelectPortalPage() {
         "Post new roles, track applicants through the hiring pipeline, schedule interviews, and manage every stage of the recruitment process in one place.",
       icon: Briefcase,
       href: "/recruitment-portal/dashboard",
+    },
+    {
+      id: "system",
+      label: "System",
+      tagline: "Users, roles & platform settings",
+      detail:
+        "Full control over the platform — manage user accounts, configure permissions and roles, review audit logs, and adjust system-wide security settings.",
+      icon: Shield,
+      href: "/system/dashboard",
     },
   ];
 
