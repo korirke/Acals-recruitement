@@ -31,7 +31,7 @@ interface ResumeSectionProps {
   onUpdate: () => void;
 }
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_TYPES = [
   "application/pdf",
   "application/msword",
@@ -74,7 +74,7 @@ export default function ResumeSection({
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      return "File size exceeds 5MB limit.";
+      return "File size exceeds 2MB limit.";
     }
 
     const ext = file.name.split(".").pop()?.toLowerCase();
@@ -177,7 +177,7 @@ export default function ResumeSection({
           Resume / CV
         </CardTitle>
         <CardDescription className="text-neutral-600 dark:text-neutral-400">
-          Upload your latest resume. Supported formats: PDF, DOC, DOCX (Max 5MB)
+          Upload your latest resume. Supported formats: PDF, DOC, DOCX (Max 2MB)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -198,7 +198,7 @@ export default function ResumeSection({
               Click to upload or drag and drop
             </p>
             <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-4">
-              PDF, DOC or DOCX (max. 5MB)
+              PDF, DOC or DOCX (max. 2MB)
             </p>
 
             {!selectedFile ? (
