@@ -17,6 +17,11 @@ import { candidateService } from "@/services/recruitment-services";
 import type { CandidateProfile } from "@/types";
 import { Loader2, Save, IdCard } from "lucide-react";
 
+function normalisePlwd(value: unknown): boolean {
+  if (value === true || value === 1 || value === "1") return true;
+  return false;
+}
+
 export default function PersonalInfoSection({
   profile,
   onUpdate,
@@ -27,7 +32,7 @@ export default function PersonalInfoSection({
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
 
-  // derive full name from Basic tab
+  // Derive full name from Basic tab (read-only helper)
   const derivedFullName = useMemo(() => {
     const first = profile?.user?.firstName || "";
     const last = profile?.user?.lastName || "";
@@ -54,7 +59,7 @@ export default function PersonalInfoSection({
       idNumber: p.idNumber || "",
       nationality: p.nationality || "",
       countyOfOrigin: p.countyOfOrigin || "",
-      plwd: typeof p.plwd === "boolean" ? p.plwd : prev.plwd,
+      plwd: normalisePlwd(p.plwd),
     }));
   }, [profile]);
 
@@ -107,7 +112,7 @@ export default function PersonalInfoSection({
         idNumber: form.idNumber.trim(),
         nationality: form.nationality.trim(),
         countyOfOrigin: form.countyOfOrigin.trim(),
-        plwd: !!form.plwd,
+        plwd: form.plwd === true,
       });
 
       toast({
@@ -116,7 +121,6 @@ export default function PersonalInfoSection({
         description: "Personal details saved successfully",
       });
 
-      // Trigger parent to refresh profile data
       await Promise.resolve(onUpdate());
     } catch (e: any) {
       toast({
@@ -143,18 +147,6 @@ export default function PersonalInfoSection({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Display derived full name (read-only) */}
-        {/* <div className="space-y-2">
-          <Label className="text-neutral-700 dark:text-neutral-300">
-            Full Name (from Basic Info)
-          </Label>
-          <Input
-            value={derivedFullName}
-            disabled
-            className="bg-neutral-100 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white"
-          />
-        </div> */}
-
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-neutral-700 dark:text-neutral-300">
@@ -223,7 +215,7 @@ export default function PersonalInfoSection({
           </div>
         </div>
 
-        {/* PLWD toggle */}
+        {/* PLWD toggle — FIX: checked={form.plwd === true} not checked={!!form.plwd} */}
         <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700">
           <div>
             <Label className="text-base font-semibold text-neutral-900 dark:text-white">
@@ -235,9 +227,9 @@ export default function PersonalInfoSection({
           </div>
 
           <Switch
-            checked={!!form.plwd}
+            checked={form.plwd === true}
             onCheckedChange={(checked) =>
-              setForm((prev) => ({ ...prev, plwd: !!checked }))
+              setForm((prev) => ({ ...prev, plwd: checked === true }))
             }
           />
         </div>
@@ -249,7 +241,7 @@ export default function PersonalInfoSection({
         >
           {isSaving ? (
             <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving…
             </>
           ) : (
             <>
