@@ -1,4 +1,3 @@
-// services/web-services/quote-requests.service.ts
 /**
  * Quote Requests Service
  * API service for quote request management
@@ -169,7 +168,7 @@ export const quoteRequestsService = {
   getDownloadUrl(fileUrl?: string, fileName?: string): string {
     if (fileUrl) return fileUrl;
     if (!fileName) return "#";
-    return `${config.mediaBaseUrl}/v1/uploads/Quotes/${fileName}`;
+    return `${config.mediaBaseUrl}/v2/uploads/Quotes/${fileName}`;
   },
 
   /**
