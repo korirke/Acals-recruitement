@@ -9,7 +9,9 @@ export const validators = {
       return { isValid: false, error: "Email is required" };
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex =
+      /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.(com|org|net|edu|gov|co|io)$/i;
+
     if (!emailRegex.test(email)) {
       return { isValid: false, error: "Please enter a valid email address" };
     }
