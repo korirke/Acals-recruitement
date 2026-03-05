@@ -107,9 +107,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Redirect based on role
         const redirectUrl = response.data.redirectUrl || "/careers-portal";
         router.push(redirectUrl);
-        // setTimeout(() => {
-        //   router.push(redirectUrl);
-        // }, 100);
       } else {
         throw new Error(response.message || "Login failed");
       }
@@ -136,8 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await api.post(ENDPOINTS.AUTH.REGISTER, data);
 
       if (response.success) {
-        // Show success message and redirect to login
-        router.push("/login?registered=true");
+        router.push("/login");
       } else {
         throw new Error(response.message || "Registration failed");
       }
