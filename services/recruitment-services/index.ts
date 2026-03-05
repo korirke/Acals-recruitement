@@ -9,5 +9,9 @@ export { jobProfileRequirementsService } from './jobProfileRequirements.service'
 export { companyService } from './company.service';
 export { jobApplicationPipelineService } from './jobApplicationPipeline.service';
 export { shortlistService } from './shortlist.service';
+export * from "./jobQuestionnaire.service";
+export * from "./jobApplicationConfig.service";
+export * from "./educationQualificationLevel.service";
+export * from "./resumeCleanupService";
 
 

@@ -1,8 +1,13 @@
 import { api } from "@/lib/apiClient";
 import type { ApiResponse } from "@/types/api/common.types";
+import type {
+  JobQuestionnaireGetResponse,
+  QuestionnaireAnswerPayloadItem,
+} from "@/types/recruitment/jobQuestionnaire.types";
 
 export interface ApplicationPipelineFormData {
   jobId: string;
+
   basic?: {
     title?: string;
     location?: string;
@@ -10,11 +15,9 @@ export interface ApplicationPipelineFormData {
     phone?: string;
     portfolioUrl?: string;
   };
-  skills?: Array<{
-    skillName: string;
-    level?: string;
-    yearsOfExp?: number;
-  }>;
+
+  // profile sections optional (autosave means you typically won't send these)
+  skills?: Array<{ skillName: string; level?: string; yearsOfExp?: number }>;
   experience?: Array<{
     title: string;
     company: string;
@@ -43,6 +46,7 @@ export interface ApplicationPipelineFormData {
     countyOfOrigin: string;
     plwd?: boolean;
   };
+
   publications?: Array<{
     title: string;
     type: string;
@@ -75,10 +79,20 @@ export interface ApplicationPipelineFormData {
     organization?: string;
     phone?: string;
     email?: string;
+    relationship?: string;
   }>;
+
+  questionnaireAnswers?: any[];
+
   coverLetter: string;
+
+  coverLetterFileUrl?: string;
+
   portfolioUrl?: string;
   expectedSalary: string;
+
+  currentSalary?: string;
+
   availableStartDate: string;
   privacyConsent: boolean;
 }
@@ -192,16 +206,20 @@ export interface ApplicationPipelineData {
     resumeUrl?: string;
   };
   requirements: string[];
+
+  questionnaire?: JobQuestionnaireGetResponse;
 }
 
 export const jobApplicationPipelineService = {
-  async getFormData(jobId: string): Promise<ApiResponse<ApplicationPipelineData>> {
+  async getFormData(
+    jobId: string,
+  ): Promise<ApiResponse<ApplicationPipelineData>> {
     return api.get(`/jobs/${jobId}/application-pipeline`);
   },
 
   async submitWithInlineUpdates(
     jobId: string,
-    data: ApplicationPipelineFormData
+    data: ApplicationPipelineFormData,
   ): Promise<ApiResponse<{ applicationId: string }>> {
     return api.post(`/jobs/${jobId}/application-pipeline/submit`, data);
   },

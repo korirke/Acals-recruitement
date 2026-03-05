@@ -4,6 +4,7 @@ import type {
   JobProfileEligibilityDTO,
   JobProfileRequirementsDTO,
   ProfileRequirementKey,
+  JobApplicationConfigDTO,
 } from "@/types/recruitment/profileRequirements.types";
 
 export const jobProfileRequirementsService = {
@@ -11,8 +12,19 @@ export const jobProfileRequirementsService = {
     return api.get(`/jobs/${jobId}/profile-requirements`);
   },
 
-  async upsert(jobId: string, requirementKeys: ProfileRequirementKey[]) {
-    return api.put(`/jobs/${jobId}/profile-requirements`, { requirementKeys });
+  /**
+   * PUT /jobs/{jobId}/profile-requirements
+   * Saves requirementKeys AND (optionally) config in ONE request.
+   */
+  async upsert(
+    jobId: string,
+    requirementKeys: ProfileRequirementKey[],
+    config?: Partial<JobApplicationConfigDTO>,
+  ): Promise<ApiResponse<JobProfileRequirementsDTO>> {
+    return api.put(`/jobs/${jobId}/profile-requirements`, {
+      requirementKeys,
+      config: config ?? undefined,
+    });
   },
 
   async getEligibility(
