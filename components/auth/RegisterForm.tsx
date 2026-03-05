@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/careers/ui/button";
 import { Loader2 } from "lucide-react";
@@ -9,6 +9,7 @@ import { useToast } from "@/components/admin/ui/Toast";
 import { validators } from "@/lib/utils/validation";
 import { FormInput } from "./FormInput";
 import { FormError } from "./FormError";
+import { MathCaptcha, MathCaptchaHandle } from "./MathCaptcha";
 
 interface RegisterFormData {
   email: string;
@@ -29,8 +30,15 @@ export function RegisterForm() {
     firstName: "",
     lastName: "",
   });
-  const [errors, setErrors] = useState<Partial<Record<keyof RegisterFormData, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof RegisterFormData, string>>
+  >({});
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
+
+  // Ref to call verify/reset on the captcha widget from the parent
+  const captchaRef = useRef<MathCaptchaHandle | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -42,33 +50,30 @@ export function RegisterForm() {
   const validateForm = (): boolean => {
     const newErrors: Partial<Record<keyof RegisterFormData, string>> = {};
 
-    const firstNameValidation = validators.name(formData.firstName, "First name");
-    if (!firstNameValidation.isValid) {
+    const firstNameValidation = validators.name(
+      formData.firstName,
+      "First name",
+    );
+    if (!firstNameValidation.isValid)
       newErrors.firstName = firstNameValidation.error;
-    }
 
     const lastNameValidation = validators.name(formData.lastName, "Last name");
-    if (!lastNameValidation.isValid) {
+    if (!lastNameValidation.isValid)
       newErrors.lastName = lastNameValidation.error;
-    }
 
     const emailValidation = validators.email(formData.email);
-    if (!emailValidation.isValid) {
-      newErrors.email = emailValidation.error;
-    }
+    if (!emailValidation.isValid) newErrors.email = emailValidation.error;
 
     const passwordValidation = validators.password(formData.password);
-    if (!passwordValidation.isValid) {
+    if (!passwordValidation.isValid)
       newErrors.password = passwordValidation.error;
-    }
 
     const passwordMatchValidation = validators.passwordMatch(
       formData.password,
-      formData.confirmPassword
+      formData.confirmPassword,
     );
-    if (!passwordMatchValidation.isValid) {
+    if (!passwordMatchValidation.isValid)
       newErrors.confirmPassword = passwordMatchValidation.error;
-    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -77,11 +82,22 @@ export function RegisterForm() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setGlobalError(null);
+    setCaptchaError(null);
 
-    if (!validateForm()) {
+    // 1. Validate form fields first
+    if (!validateForm()) return;
+
+    // 2. Verify CAPTCHA — if already verified, proceed; otherwise attempt verify now
+    let verified = captchaVerified;
+    if (!verified) {
+      verified = captchaRef.current?.verify() ?? false;
+    }
+    if (!verified) {
+      setCaptchaError("Please solve the math question to continue.");
       return;
     }
 
+    // 3. Submit
     try {
       await register({
         email: formData.email,
@@ -92,16 +108,22 @@ export function RegisterForm() {
       });
 
       showToast({
-        type: 'success',
-        title: 'Account Created!',
-        message: 'Please proceed to login.',
+        type: "success",
+        title: "Account Created!",
+        message: "Please proceed to login.",
       });
     } catch (err: any) {
-      const errorMessage = err.message || "Registration failed. Please try again.";
+      const errorMessage =
+        err.message || "Registration failed. Please try again.";
       setGlobalError(errorMessage);
+
+      // Reset CAPTCHA on failed submission so user must re-verify
+      captchaRef.current?.reset();
+      setCaptchaVerified(false);
+
       showToast({
-        type: 'error',
-        title: 'Registration Failed',
+        type: "error",
+        title: "Registration Failed",
         message: errorMessage,
       });
     }
@@ -112,6 +134,7 @@ export function RegisterForm() {
       {globalError && <FormError message={globalError} />}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Name row */}
         <div className="grid grid-cols-2 gap-4">
           <FormInput
             id="firstName"
@@ -137,6 +160,7 @@ export function RegisterForm() {
           />
         </div>
 
+        {/* Email */}
         <FormInput
           id="email"
           name="email"
@@ -150,6 +174,7 @@ export function RegisterForm() {
           error={errors.email}
         />
 
+        {/* Password */}
         <FormInput
           id="password"
           name="password"
@@ -165,6 +190,7 @@ export function RegisterForm() {
           helperText="Must be at least 8 characters with uppercase, lowercase, and number"
         />
 
+        {/* Confirm Password */}
         <FormInput
           id="confirmPassword"
           name="confirmPassword"
@@ -179,6 +205,17 @@ export function RegisterForm() {
           showPasswordToggle
         />
 
+        {/* ── Math CAPTCHA ── */}
+        <MathCaptcha
+          onVerified={(ok: boolean) => {
+            setCaptchaVerified(ok);
+            if (ok) setCaptchaError(null);
+          }}
+          captchaRef={captchaRef}
+          error={captchaError}
+        />
+
+        {/* Submit */}
         <Button
           type="submit"
           className="w-full h-11 bg-linear-to-r from-primary-500 to-orange-500 hover:from-primary-600 hover:to-orange-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
