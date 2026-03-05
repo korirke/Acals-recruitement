@@ -64,16 +64,21 @@ export default function SystemLayout({ children }: SystemLayoutProps) {
       icon: Settings,
     },
     {
+      name: "Resume Cleanup",
+      href: "/system/resume-cleanup",
+      icon: Shield,
+    },
+    {
       name: "Portals",
       icon: Globe,
       key: "portals",
       submenu: [
-        {
-          name: "Website CMS",
-          href: "/dashboard",
-          icon: Globe,
-          description: "Manage website content",
-        },
+        // {
+        //   name: "Website CMS",
+        //   href: "/dashboard",
+        //   icon: Globe,
+        //   description: "Manage website content",
+        // },
         {
           name: "Recruitment",
           href: "/recruitment-portal/dashboard",
