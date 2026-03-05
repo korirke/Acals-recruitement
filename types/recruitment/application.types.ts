@@ -1,3 +1,7 @@
+import type {
+  JobQuestionnaireGetResponse,
+} from "@/types/recruitment/jobQuestionnaire.types";
+
 export interface ApplicationForEmployer {
   id: string;
   jobId: string;
@@ -17,6 +21,9 @@ export interface ApplicationForEmployer {
   appliedAt: string;
   reviewedAt?: string;
   updatedAt: string;
+
+  answers?: any;
+
   candidate: {
     id: string;
     firstName: string;
@@ -45,8 +52,20 @@ export interface ApplicationForEmployer {
         };
         level?: string;
       }>;
+
+      // optional extras from API
+      personalInfo?: any;
+      publications?: any[];
+      memberships?: any[];
+      clearances?: any[];
+      courses?: any[];
+      referees?: any[];
+      files?: any[];
+      certifications?: any[];
+      languages?: any[];
     };
   };
+
   job: {
     id: string;
     title: string;
@@ -56,6 +75,7 @@ export interface ApplicationForEmployer {
       logo?: string;
     };
   };
+
   statusHistory?: Array<{
     id: string;
     fromStatus?: string;
@@ -116,6 +136,7 @@ export interface ApplicationForInterview {
 
 export interface ApplicationPipelineFormData {
   jobId: string;
+
   basic?: {
     title?: string;
     location?: string;
@@ -123,30 +144,11 @@ export interface ApplicationPipelineFormData {
     phone?: string;
     portfolioUrl?: string;
   };
-  skills?: Array<{
-    skillName: string;
-    level?: string;
-    yearsOfExp?: number;
-  }>;
-  experience?: Array<{
-    title: string;
-    company: string;
-    location?: string;
-    startDate: string;
-    endDate?: string;
-    isCurrent?: boolean;
-    description?: string;
-  }>;
-  education?: Array<{
-    degree: string;
-    institution: string;
-    fieldOfStudy: string;
-    startDate: string;
-    endDate?: string;
-    isCurrent?: boolean;
-    grade?: string;
-    description?: string;
-  }>;
+
+  // profile sections optional (autosave means you typically won't send these)
+  skills?: Array<{ skillName: string; level?: string; yearsOfExp?: number }>;
+  experience?: Array<{ title: string; company: string; location?: string; startDate: string; endDate?: string; isCurrent?: boolean; description?: string }>;
+  education?: Array<{ degree: string; institution: string; fieldOfStudy: string; startDate: string; endDate?: string; isCurrent?: boolean; grade?: string; description?: string }>;
   personalInfo?: {
     fullName: string;
     dob: string;
@@ -156,42 +158,24 @@ export interface ApplicationPipelineFormData {
     countyOfOrigin: string;
     plwd?: boolean;
   };
-  publications?: Array<{
-    title: string;
-    type: string;
-    journalOrPublisher?: string;
-    year: number;
-    link?: string;
-  }>;
-  memberships?: Array<{
-    bodyName: string;
-    membershipNumber?: string;
-    isActive?: boolean;
-    goodStanding?: boolean;
-  }>;
-  clearances?: Array<{
-    type: string;
-    certificateNumber?: string;
-    issueDate: string;
-    expiryDate?: string;
-    status?: "VALID" | "EXPIRED" | "PENDING";
-  }>;
-  courses?: Array<{
-    name: string;
-    institution: string;
-    durationWeeks: number;
-    year: number;
-  }>;
-  referees?: Array<{
-    name: string;
-    position?: string;
-    organization?: string;
-    phone?: string;
-    email?: string;
-  }>;
+
+  publications?: Array<{ title: string; type: string; journalOrPublisher?: string; year: number; link?: string }>;
+  memberships?: Array<{ bodyName: string; membershipNumber?: string; isActive?: boolean; goodStanding?: boolean }>;
+  clearances?: Array<{ type: string; certificateNumber?: string; issueDate: string; expiryDate?: string; status?: "VALID" | "EXPIRED" | "PENDING" }>;
+  courses?: Array<{ name: string; institution: string; durationWeeks: number; year: number }>;
+  referees?: Array<{ name: string; position?: string; organization?: string; phone?: string; email?: string; relationship?: string }>;
+
+  questionnaireAnswers?: any[];
+
   coverLetter: string;
+
+  coverLetterFileUrl?: string;
+
   portfolioUrl?: string;
   expectedSalary: string;
+
+  currentSalary?: string;
+
   availableStartDate: string;
   privacyConsent: boolean;
 }
@@ -202,6 +186,7 @@ export interface ApplicationPipelineData {
     title: string;
     companyId: string;
   };
+
   eligibility: {
     isEligible: boolean;
     completedCount: number;
@@ -209,6 +194,7 @@ export interface ApplicationPipelineData {
     missingKeys: string[];
     completionPercentage: number;
   };
+
   profileSnapshot: {
     user: {
       firstName: string;
@@ -304,5 +290,8 @@ export interface ApplicationPipelineData {
     }>;
     resumeUrl?: string;
   };
+
   requirements: string[];
+
+  questionnaire?: JobQuestionnaireGetResponse;
 }
