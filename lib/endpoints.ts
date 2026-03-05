@@ -49,6 +49,7 @@ export const ENDPOINTS = {
     TESTIMONIALS: "/admin/testimonials",
     CONTACT: "/contact",
     ABOUT: "/about",
+    CANDIDATES: "/admin/candidates"
   },
 
   MEDIA: {
