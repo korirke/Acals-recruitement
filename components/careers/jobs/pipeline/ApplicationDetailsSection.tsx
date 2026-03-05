@@ -92,7 +92,7 @@ export default function ApplicationDetailsSection({
 
       const res = await candidateService.uploadCandidateFile({
         file,
-        category: "OTHER",
+        category: "COVER_LETTER",
         title: "Cover Letter",
       });
 
