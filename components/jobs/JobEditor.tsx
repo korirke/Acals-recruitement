@@ -2,7 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, Eye } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Eye,
+  FileText,
+  Upload as UploadIcon,
+  X,
+  Loader2,
+} from "lucide-react";
 
 import {
   Card,
@@ -26,6 +34,7 @@ import { Checkbox } from "@/components/careers/ui/checkbox";
 import { Separator } from "@/components/careers/ui/separator";
 
 import { CompanySelector } from "@/components/jobs/CompanySelector";
+import { useUpload } from "@/hooks/useUpload";
 
 import type { CreateJobDto, JobCategory } from "@/types";
 import {
@@ -56,6 +65,8 @@ export function JobEditor(props: {
   title: string;
   subtitle: string;
   backHref: string;
+
+  editingJobTitle?: string;
 
   userRole?: string;
   isAdmin: boolean;
@@ -92,6 +103,24 @@ export function JobEditor(props: {
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split("T")[0];
   }, []);
+
+  // ── JD Document upload
+  const {
+    uploadSingleFile,
+    uploading: jdUploading,
+    progress: jdProgress,
+  } = useUpload();
+
+  const handleJDUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const result = await uploadSingleFile(file);
+    if (result?.url) {
+      props.onChange("jdDocumentUrl", result.url as any);
+    }
+    // reset so the same file can be re-selected if removed
+    e.target.value = "";
+  };
 
   const showFirstError = () => {
     const field = firstErrorField(props.errors);
@@ -483,6 +512,31 @@ export function JobEditor(props: {
           </div>
         </div>
 
+        {/* ──Key Skills and Competencies */}
+        <div>
+          <Label htmlFor="keySkillsAndCompetencies">
+            Key Skills and Competencies{" "}
+          </Label>
+          <div className="mt-2">
+            <Textarea
+              id="keySkillsAndCompetencies"
+              value={String(data.keySkillsAndCompetencies ?? "")}
+              placeholder={
+                "One per line:\n• Strong communication skills\n• Problem-solving mindset\n• Team collaboration"
+              }
+              onChange={(e) =>
+                props.onChange(
+                  "keySkillsAndCompetencies",
+                  e.target.value as any,
+                )
+              }
+              rows={12}
+              className="font-mono text-sm leading-6"
+            />
+          </div>
+        </div>
+        {/* ────────────────────────────────────*/}
+
         <div>
           <Label htmlFor="niceToHave">Nice to have </Label>
           <div className="mt-2">
@@ -497,6 +551,95 @@ export function JobEditor(props: {
             />
           </div>
         </div>
+
+        {/* ── JD Document Upload  */}
+        <Separator />
+        <div>
+          <Label htmlFor="jdDocument">
+            Job Description Document{" "}
+            <span className="text-sm font-normal text-neutral-500 dark:text-neutral-400">
+              (Optional)
+            </span>
+          </Label>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1 mb-3">
+            Upload a PDF, Word (.doc/.docx), or image for candidates to
+            download. Max 10 MB.
+          </p>
+
+          {data.jdDocumentUrl ? (
+            /* ── Uploaded state ── */
+            <div className="flex items-center gap-3 p-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900">
+              <div className="flex items-center justify-center h-10 w-10 rounded-lg bg-primary-50 dark:bg-primary-900/30 shrink-0">
+                <FileText className="h-5 w-5 text-primary-600 dark:text-primary-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">
+                  Document uploaded
+                </p>
+                <a
+                  href={data.jdDocumentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                >
+                  Preview / Download
+                </a>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="shrink-0 text-neutral-500 hover:text-red-500"
+                onClick={() =>
+                  props.onChange("jdDocumentUrl", undefined as any)
+                }
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            /* ── Upload dropzone ── */
+            <div>
+              <input
+                type="file"
+                id="jdDocument"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
+                className="hidden"
+                onChange={handleJDUpload}
+                disabled={jdUploading}
+              />
+              <label
+                htmlFor="jdDocument"
+                className={[
+                  "flex flex-col items-center justify-center w-full h-32 rounded-xl",
+                  "border-2 border-dashed transition-colors cursor-pointer",
+                  jdUploading
+                    ? "border-primary-400 bg-primary-50 dark:bg-primary-900/10 cursor-not-allowed"
+                    : "border-neutral-300 dark:border-neutral-700 hover:border-primary-500 dark:hover:border-primary-500 hover:bg-neutral-50 dark:hover:bg-neutral-900",
+                ].join(" ")}
+              >
+                {jdUploading ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary-500" />
+                    <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                      Uploading… {jdProgress}%
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center gap-2 pointer-events-none">
+                    <UploadIcon className="h-6 w-6 text-neutral-400" />
+                    <p className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
+                      Click to upload JD document
+                    </p>
+                    <p className="text-xs text-neutral-400">
+                      PDF, Word, JPG, PNG — max 10 MB
+                    </p>
+                  </div>
+                )}
+              </label>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -506,7 +649,26 @@ export function JobEditor(props: {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
+          {/* ── NEW: Back navigation link above the title ─────────────────────── */}
+          <Link
+            href={props.backHref}
+            className="inline-flex items-center gap-1.5 text-sm text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors mb-3"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Jobs
+          </Link>
+          {/* ─────────────────────────────────────*/}
+
           <h1 className="text-3xl font-bold leading-tight">{props.title}</h1>
+
+          {/* ── NEW: Show which job is being edited (EDIT mode only) ─────────── */}
+          {props.mode === "EDIT" && props.editingJobTitle && (
+            <p className="mt-1 text-base font-semibold text-primary-600 dark:text-primary-400 truncate max-w-xl">
+              {props.editingJobTitle}
+            </p>
+          )}
+          {/* ─────────────────────────────────────*/}
+
           <p className="text-neutral-600 dark:text-neutral-400 mt-2">
             {props.subtitle}
           </p>
@@ -520,9 +682,14 @@ export function JobEditor(props: {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          {/* ── Back button (icon + label) in the action bar ─────────────────── */}
           <Button asChild variant="outline">
-            <Link href={props.backHref}>Back</Link>
+            <Link href={props.backHref}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Link>
           </Button>
+          {/* ─────────────────────────────────────*/}
 
           {props.previewHref && (
             <Button asChild variant="outline">
@@ -617,6 +784,20 @@ export function JobEditor(props: {
               )}
 
               <Separator />
+
+              {/* JD Document indicator in summary */}
+              {data.jdDocumentUrl && (
+                <>
+                  <div>
+                    <p className="text-xs text-muted-foreground">JD Document</p>
+                    <p className="font-semibold text-green-600 dark:text-green-400 flex items-center gap-1">
+                      <FileText className="h-3.5 w-3.5" />
+                      Uploaded
+                    </p>
+                  </div>
+                  <Separator />
+                </>
+              )}
 
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Draft requires{" "}
