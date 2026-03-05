@@ -103,7 +103,7 @@ export function MathCaptcha({
 
       <div className="space-y-2">
         <label className="block text-sm font-medium text-neutral-700 dark:text-neutral-300">
-          Human Verification
+          Verification
         </label>
 
         {/* ── Outer card ── */}
