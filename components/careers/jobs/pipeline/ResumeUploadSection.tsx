@@ -1,18 +1,23 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/careers/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/careers/ui/card";
 import { Button } from "@/components/careers/ui/button";
 import { Progress } from "@/components/careers/ui/progress";
 import { useToast } from "@/components/admin/ui/Toast";
 import { candidateService } from "@/services/recruitment-services";
-import { 
-  Upload, 
-  FileText, 
-  X, 
-  Loader2, 
-  CheckCircle2, 
-  AlertCircle 
+import {
+  Upload,
+  FileText,
+  X,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
 interface Props {
@@ -27,11 +32,15 @@ const ALLOWED_TYPES = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
 
-export default function ResumeUploadSection({ resumeUrl, onResumeUploaded }: Props) {
+export default function ResumeUploadSection({
+  resumeUrl,
+  onResumeUploaded,
+}: Props) {
   const { showToast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadedThisSession, setUploadedThisSession] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const formatFileSize = (bytes: number) => {
@@ -96,14 +105,15 @@ export default function ResumeUploadSection({ resumeUrl, onResumeUploaded }: Pro
       clearInterval(progressInterval);
       setUploadProgress(100);
 
-      if (response.success && response.data?.resumeUrl) {
+      if (response.success && response.data?.fileUrl) {
         showToast({
           type: "success",
           title: "Success",
           message: "Resume uploaded successfully",
         });
-        onResumeUploaded(response.data.resumeUrl);
+        onResumeUploaded(response.data.fileUrl);
         setSelectedFile(null);
+        setUploadedThisSession(true);
       }
 
       setTimeout(() => {
@@ -130,6 +140,9 @@ export default function ResumeUploadSection({ resumeUrl, onResumeUploaded }: Pro
     }
   };
 
+  // Resume is considered "done" if it existed before OR was just uploaded this session
+  const isResumeReady = (resumeUrl && !selectedFile) || uploadedThisSession;
+
   return (
     <Card className="border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
       <CardHeader className="pb-4">
@@ -141,10 +154,25 @@ export default function ResumeUploadSection({ resumeUrl, onResumeUploaded }: Pro
           Upload your resume (PDF, DOC, DOCX - Max 2MB)
         </p>
       </CardHeader>
-      
+
       <CardContent className="space-y-4">
-        {/* Current Resume Status */}
-        {resumeUrl && !selectedFile && (
+        {/* Success banner — shown after upload this session */}
+        {uploadedThisSession && (
+          <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-green-900 dark:text-green-200">
+                Resume uploaded successfully
+              </p>
+              <p className="text-xs text-green-700 dark:text-green-300 mt-0.5">
+                Your resume has been saved to your profile
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Resume already on profile (not just uploaded) */}
+        {resumeUrl && !uploadedThisSession && !selectedFile && (
           <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
             <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
             <span className="text-sm font-medium text-green-900 dark:text-green-200 flex-1">
@@ -153,7 +181,8 @@ export default function ResumeUploadSection({ resumeUrl, onResumeUploaded }: Pro
           </div>
         )}
 
-        {!resumeUrl && !selectedFile && (
+        {/* No resume at all */}
+        {!resumeUrl && !selectedFile && !uploadedThisSession && (
           <div className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
             <AlertCircle className="h-5 w-5 text-orange-600 shrink-0" />
             <span className="text-sm text-orange-900 dark:text-orange-200 flex-1">
@@ -162,101 +191,103 @@ export default function ResumeUploadSection({ resumeUrl, onResumeUploaded }: Pro
           </div>
         )}
 
-        {/* File Selection / Upload */}
-        <div className="space-y-3">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.doc,.docx"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
+        {/* File Selection / Upload — hidden once uploaded this session */}
+        {!uploadedThisSession && (
+          <div className="space-y-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
 
-          {!selectedFile ? (
-            <Button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              variant="outline"
-              className="w-full h-auto py-6 border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-primary-500 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10"
-            >
-              <div className="flex flex-col items-center gap-2">
-                <Upload className="h-6 w-6 text-primary-500" />
-                <span className="font-medium text-neutral-900 dark:text-white">
-                  {resumeUrl ? "Upload New Resume" : "Upload Resume"}
-                </span>
-                <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                  PDF, DOC or DOCX (max. 2MB)
-                </span>
-              </div>
-            </Button>
-          ) : (
-            <div className="space-y-3">
-              {/* Selected File Display */}
-              <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-blue-900 dark:text-blue-200 truncate">
-                    {selectedFile.name}
-                  </p>
-                  <p className="text-xs text-blue-700 dark:text-blue-300">
-                    {formatFileSize(selectedFile.size)}
-                  </p>
+            {!selectedFile ? (
+              <Button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                variant="outline"
+                className="w-full h-auto py-6 border-2 border-dashed border-neutral-300 dark:border-neutral-700 hover:border-primary-500 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/10"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Upload className="h-6 w-6 text-primary-500" />
+                  <span className="font-medium text-neutral-900 dark:text-white">
+                    {resumeUrl ? "Upload New Resume" : "Upload Resume"}
+                  </span>
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                    PDF, DOC or DOCX (max. 2MB)
+                  </span>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleCancel}
-                  disabled={isUploading}
-                  className="hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 shrink-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              {/* Upload Progress */}
-              {isUploading && uploadProgress > 0 && (
-                <div className="space-y-2">
-                  <Progress value={uploadProgress} className="h-2" />
-                  <p className="text-xs text-center text-neutral-600 dark:text-neutral-400">
-                    Uploading... {uploadProgress}%
-                  </p>
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                {/* Selected File Display */}
+                <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-blue-900 dark:text-blue-200 truncate">
+                      {selectedFile.name}
+                    </p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      {formatFileSize(selectedFile.size)}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleCancel}
+                    disabled={isUploading}
+                    className="hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
 
-              {/* Upload Actions */}
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  onClick={handleUpload}
-                  disabled={isUploading}
-                  className="flex-1 bg-primary-500 hover:bg-primary-600 text-white"
-                >
-                  {isUploading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Uploading...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Resume
-                    </>
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCancel}
-                  disabled={isUploading}
-                >
-                  Cancel
-                </Button>
+                {/* Upload Progress */}
+                {isUploading && uploadProgress > 0 && (
+                  <div className="space-y-2">
+                    <Progress value={uploadProgress} className="h-2" />
+                    <p className="text-xs text-center text-neutral-600 dark:text-neutral-400">
+                      Uploading... {uploadProgress}%
+                    </p>
+                  </div>
+                )}
+
+                {/* Upload Actions */}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={handleUpload}
+                    disabled={isUploading}
+                    className="flex-1 bg-primary-500 hover:bg-primary-600 text-white"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Upload Resume
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleCancel}
+                    disabled={isUploading}
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

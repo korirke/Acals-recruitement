@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Card,
   CardContent,
@@ -24,8 +24,6 @@ import {
   Upload,
 } from "lucide-react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface Props {
   missingKeys: string[];
   existingFiles: Array<{
@@ -35,6 +33,8 @@ interface Props {
     fileUrl: string;
     title?: string;
   }>;
+
+  onRequiredDocsReadyChange?: (readyMap: Record<string, boolean>) => void;
 }
 
 interface RequiredDocInfo {
@@ -42,8 +42,6 @@ interface RequiredDocInfo {
   category: string;
   description: string;
 }
-
-// ─── Config ───────────────────────────────────────────────────────────────────
 
 const REQUIRED_CATEGORY_MAP: Record<string, RequiredDocInfo> = {
   DOCUMENT_NATIONAL_ID: {
@@ -68,21 +66,18 @@ const REQUIRED_CATEGORY_MAP: Record<string, RequiredDocInfo> = {
   },
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
-
 export default function DocumentsSection({
   missingKeys,
   existingFiles,
+  onRequiredDocsReadyChange,
 }: Props) {
   const { showToast } = useToast();
 
-  // ── Required-document state ───────────────────────────────────────────────
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [uploadedRequired, setUploadedRequired] = useState<
     Record<string, { fileName: string }>
   >({});
 
-  // ── Other-documents state ─────────────────────────────────────────────────
   const [otherFiles, setOtherFiles] = useState<
     Array<{ id: string; fileName: string; title?: string }>
   >(existingFiles.filter((f) => f.category === "OTHER"));
@@ -90,18 +85,44 @@ export default function DocumentsSection({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const otherInputRef = useRef<HTMLInputElement>(null);
 
-  // Which required-doc keys are actually relevant
-  const documentKeys = missingKeys.filter(
-    (k) => k.startsWith("DOCUMENT_") && REQUIRED_CATEGORY_MAP[k],
-  );
+  const documentKeys = useMemo(() => {
+    return missingKeys.filter(
+      (k) => k.startsWith("DOCUMENT_") && REQUIRED_CATEGORY_MAP[k],
+    );
+  }, [missingKeys]);
+
   const hasRequiredDocs = documentKeys.length > 0;
 
-  // ── Required upload ───────────────────────────────────────────────────────
+  const getRequiredStatus = (
+    key: string,
+  ): "existing" | "uploaded" | "missing" => {
+    if (uploadedRequired[key]) return "uploaded";
+    const { category } = REQUIRED_CATEGORY_MAP[key];
+    if (existingFiles.some((f) => f.category === category)) return "existing";
+    return "missing";
+  };
+
+  // Compute readiness map (memoized)
+  const readyMap = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    for (const k of documentKeys) {
+      m[k] = getRequiredStatus(k) !== "missing";
+    }
+    return m;
+  }, [documentKeys, uploadedRequired, existingFiles]);
+
+  // Notify parent ONLY when readiness changes
+  const readySig = useMemo(() => JSON.stringify(readyMap), [readyMap]);
+  useEffect(() => {
+    if (!onRequiredDocsReadyChange) return;
+    if (!documentKeys.length) return;
+    onRequiredDocsReadyChange(readyMap);
+  }, [readySig, onRequiredDocsReadyChange, documentKeys.length, readyMap]);
+
   const handleRequiredUpload = async (key: string, file: File | null) => {
     if (!file) return;
     const { category, label } = REQUIRED_CATEGORY_MAP[key];
 
-    // Line ~88
     if (file.size > 2 * 1024 * 1024) {
       showToast({
         type: "error",
@@ -146,20 +167,9 @@ export default function DocumentsSection({
     }
   };
 
-  const getRequiredStatus = (
-    key: string,
-  ): "existing" | "uploaded" | "missing" => {
-    if (uploadedRequired[key]) return "uploaded";
-    const { category } = REQUIRED_CATEGORY_MAP[key];
-    if (existingFiles.some((f) => f.category === category)) return "existing";
-    return "missing";
-  };
-
-  // ── Other-document upload ─────────────────────────────────────────────────
   const handleOtherUpload = async (file: File | null) => {
     if (!file) return;
 
-    // Line ~120
     if (file.size > 2 * 1024 * 1024) {
       showToast({
         type: "error",
@@ -201,12 +211,10 @@ export default function DocumentsSection({
       });
     } finally {
       setUploadingOther(false);
-      // Reset so the same file can be re-chosen
       if (otherInputRef.current) otherInputRef.current.value = "";
     }
   };
 
-  // ── Other-document delete ─────────────────────────────────────────────────
   const handleDeleteOther = async (id: string) => {
     try {
       setDeletingId(id);
@@ -236,7 +244,6 @@ export default function DocumentsSection({
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
   return (
     <Card className="border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
       <CardHeader className="pb-4">
@@ -251,7 +258,6 @@ export default function DocumentsSection({
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {/* ── REQUIRED DOCUMENTS ── */}
         {hasRequiredDocs && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -266,6 +272,7 @@ export default function DocumentsSection({
             {documentKeys.map((key) => {
               const info = REQUIRED_CATEGORY_MAP[key];
               if (!info) return null;
+
               const status = getRequiredStatus(key);
               const inputId = `req-file-${key}`;
 
@@ -283,7 +290,6 @@ export default function DocumentsSection({
                     </p>
                   </div>
 
-                  {/* Already in profile */}
                   {status === "existing" && (
                     <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                       <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
@@ -293,7 +299,6 @@ export default function DocumentsSection({
                     </div>
                   )}
 
-                  {/* Just uploaded */}
                   {status === "uploaded" && (
                     <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
                       <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
@@ -308,7 +313,6 @@ export default function DocumentsSection({
                     </div>
                   )}
 
-                  {/* Missing */}
                   {status === "missing" && (
                     <>
                       <div className="flex items-center gap-3 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
@@ -327,6 +331,7 @@ export default function DocumentsSection({
                           handleRequiredUpload(key, e.target.files?.[0] ?? null)
                         }
                       />
+
                       <Button
                         type="button"
                         variant="outline"
@@ -358,14 +363,11 @@ export default function DocumentsSection({
           </div>
         )}
 
-        {/* Divider only when both sections are present */}
         {hasRequiredDocs && (
           <div className="border-t border-neutral-200 dark:border-neutral-700" />
         )}
 
-        {/* ── OTHER DOCUMENTS (always visible) ── */}
         <div className="space-y-3">
-          {/* Header row */}
           <div className="flex items-start gap-2">
             <FolderOpen className="h-4 w-4 text-neutral-500 mt-0.5 shrink-0" />
             <div>
@@ -384,7 +386,6 @@ export default function DocumentsSection({
             </div>
           </div>
 
-          {/* List of uploaded other-docs */}
           {otherFiles.length > 0 && (
             <div className="space-y-2">
               {otherFiles.map((f) => (
@@ -417,7 +418,6 @@ export default function DocumentsSection({
             </div>
           )}
 
-          {/* Hidden file input for other-docs */}
           <input
             type="file"
             ref={otherInputRef}
@@ -426,7 +426,6 @@ export default function DocumentsSection({
             onChange={(e) => handleOtherUpload(e.target.files?.[0] ?? null)}
           />
 
-          {/* Upload button */}
           <Button
             type="button"
             variant="outline"

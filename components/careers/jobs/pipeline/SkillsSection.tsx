@@ -6,37 +6,114 @@ import { Button } from "@/components/careers/ui/button";
 import { Input } from "@/components/careers/ui/input";
 import { Label } from "@/components/careers/ui/label";
 import { Badge } from "@/components/careers/ui/badge";
-import { Award, Plus, X, CheckCircle2 } from "lucide-react";
+import { Award, Plus, X, Loader2, CheckCircle2 } from "lucide-react";
+import { candidateService } from "@/services/recruitment-services";
+import { useToast } from "@/components/admin/ui/Toast";
 
-interface Props {
-  data: any[];
-  onChange: (data: any[]) => void;
-  existingSkills: any[];
+// Normalized internal shape
+interface SkillItem {
+  id: string;       // junction table id (candidate_skills.id) — used as React key
+  skillId: string;  // skills table id — passed to removeSkill()
+  name: string;
+  level?: string | null;
+  yearsOfExp?: number | null;
 }
 
-export default function SkillsSection({ data, onChange, existingSkills }: Props) {
+interface SkillInput {
+  id?: string;
+  skillId?: string;
+  name?: string;
+  skill?: { id: string; name: string };
+  level?: string | null;
+  yearsOfExp?: number | null;
+}
+
+interface Props {
+  /** Items from the profile snapshot (already in DB) */
+  initialSkills?: SkillInput[];
+  /** Optional callback so parent can track count for validation */
+  onCountChange?: (count: number) => void;
+}
+
+function normalize(raw: SkillInput): SkillItem {
+  return {
+    id: raw.id ?? raw.skillId ?? Math.random().toString(36).slice(2),
+    skillId: raw.skillId ?? raw.skill?.id ?? "",
+    name: raw.name ?? raw.skill?.name ?? "",
+    level: raw.level,
+    yearsOfExp: raw.yearsOfExp,
+  };
+}
+
+export default function SkillsSection({ initialSkills = [], onCountChange }: Props) {
+  const { showToast } = useToast();
+
+  const [items, setItems] = useState<SkillItem[]>(() => initialSkills.map(normalize));
   const [skillName, setSkillName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null); // skillId being deleted
 
-  const handleAdd = () => {
-    if (!skillName.trim()) return;
+  const reportCount = (list: SkillItem[]) => onCountChange?.(list.length);
 
-    onChange([
-      ...data,
-      { skillName: skillName.trim(), level: "INTERMEDIATE", yearsOfExp: 0 },
-    ]);
+  // ── Add ──
+  const handleAdd = async () => {
+    const name = skillName.trim();
+    if (!name) return;
 
-    setSkillName("");
+    // Prevent duplicates (client-side guard)
+    if (items.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
+      showToast({ type: "error", title: "Duplicate", message: "This skill is already in your profile" });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await candidateService.addSkill({ skillName: name });
+      if (res.success && res.data) {
+        const newItem: SkillItem = {
+          id: res.data.id,
+          skillId: res.data.skillId ?? res.data.skill?.id ?? "",
+          name: res.data.skill?.name ?? name,
+          level: res.data.level ?? null,
+          yearsOfExp: res.data.yearsOfExp ?? null,
+        };
+        const next = [...items, newItem];
+        setItems(next);
+        setSkillName("");
+        reportCount(next);
+        showToast({ type: "success", title: "Saved", message: `"${name}" added to your profile` });
+      } else {
+        showToast({ type: "error", title: "Save failed", message: res.message || "Could not save skill" });
+      }
+    } catch (err: any) {
+      showToast({ type: "error", title: "Error", message: err.message || "Failed to save skill" });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleRemove = (index: number) => {
-    onChange(data.filter((_, i) => i !== index));
+  // ── Remove 
+  const handleRemove = async (skillId: string) => {
+    if (!skillId) return;
+    setDeleting(skillId);
+    try {
+      const res = await candidateService.removeSkill(skillId);
+      if (res.success !== false) {
+        const next = items.filter((s) => s.skillId !== skillId);
+        setItems(next);
+        reportCount(next);
+      } else {
+        showToast({ type: "error", title: "Error", message: res.message || "Could not remove skill" });
+      }
+    } catch (err: any) {
+      showToast({ type: "error", title: "Error", message: err.message || "Failed to remove skill" });
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleAdd();
-    }
+    if (e.key === "Enter") { e.preventDefault(); handleAdd(); }
   };
 
   return (
@@ -47,78 +124,61 @@ export default function SkillsSection({ data, onChange, existingSkills }: Props)
           Skills <span className="text-red-500">*</span>
         </CardTitle>
         <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-          Add at least 1 skill relevant to this position
+          Add at least 1 skill relevant to this position — saved instantly to your profile
         </p>
       </CardHeader>
-      
+
       <CardContent className="space-y-5">
-        {/* Add New Skill */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium text-neutral-900 dark:text-white">
-            Add Skills
-          </Label>
+        {/* Add input */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-neutral-900 dark:text-white">Add Skill</Label>
           <div className="flex gap-2">
             <Input
-              placeholder="Type a skill and press Enter"
+              placeholder="Type a skill and press Enter or Add"
               value={skillName}
               onChange={(e) => setSkillName(e.target.value)}
               onKeyPress={handleKeyPress}
               className="flex-1 h-11"
+              disabled={saving}
             />
-            <Button 
-              onClick={handleAdd} 
+            <Button
+              onClick={handleAdd}
               type="button"
               size="lg"
+              disabled={saving || !skillName.trim()}
               className="bg-primary-500 hover:bg-primary-600 text-white shrink-0"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Add
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4 mr-1" />Add</>}
             </Button>
           </div>
         </div>
 
-        {/* Existing Skills (Read-only) */}
-        {existingSkills.length > 0 && (
+        {/* Skills list */}
+        {items.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-green-600" />
               <Label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                Already in your profile
+                Your skills ({items.length})
               </Label>
             </div>
             <div className="flex flex-wrap gap-2">
-              {existingSkills.map((skill) => (
-                <Badge 
-                  key={skill.id} 
-                  variant="outline"
-                  className="px-3 py-1.5 bg-neutral-50 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700"
+              {items.map((skill) => (
+                <Badge
+                  key={skill.id}
+                  className="px-3 py-1.5 bg-primary-50 text-primary-800 dark:bg-primary-900/30 dark:text-primary-200 border border-primary-200 dark:border-primary-700 flex items-center gap-2 text-sm"
                 >
                   {skill.name}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* New Skills Being Added */}
-        {data.length > 0 && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-green-700 dark:text-green-300">
-              Adding now
-            </Label>
-            <div className="flex flex-wrap gap-2">
-              {data.map((skill, index) => (
-                <Badge
-                  key={index}
-                  className="px-3 py-1.5 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-900/50 flex items-center gap-2"
-                >
-                  {skill.skillName}
                   <button
-                    onClick={() => handleRemove(index)}
-                    className="hover:text-red-600 dark:hover:text-red-400 transition-colors"
                     type="button"
+                    onClick={() => handleRemove(skill.skillId)}
+                    disabled={deleting === skill.skillId}
+                    className="hover:text-red-600 dark:hover:text-red-400 transition-colors disabled:opacity-40"
+                    aria-label={`Remove ${skill.name}`}
                   >
-                    <X className="h-3 w-3" />
+                    {deleting === skill.skillId
+                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                      : <X className="h-3 w-3" />}
                   </button>
                 </Badge>
               ))}
@@ -126,8 +186,8 @@ export default function SkillsSection({ data, onChange, existingSkills }: Props)
           </div>
         )}
 
-        {/* Validation Message */}
-        {data.length === 0 && existingSkills.length === 0 && (
+        {/* Validation message */}
+        {items.length === 0 && (
           <div className="flex items-center gap-2 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
             <Award className="h-4 w-4 text-orange-600 shrink-0" />
             <p className="text-sm text-orange-900 dark:text-orange-200">

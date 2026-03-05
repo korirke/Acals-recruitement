@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/careers/ui/card";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/careers/ui/card";
 import { Button } from "@/components/careers/ui/button";
 import { Input } from "@/components/careers/ui/input";
 import { Label } from "@/components/careers/ui/label";
 import { Checkbox } from "@/components/careers/ui/checkbox";
+import { Badge } from "@/components/careers/ui/badge";
 import {
   Select,
   SelectContent,
@@ -19,31 +25,144 @@ import {
   Trash2,
   Building2,
   Calendar,
+  Loader2,
   CheckCircle2,
+  Info,
+  AlertCircle,
 } from "lucide-react";
+import { candidateService } from "@/services/recruitment-services";
+import { educationQualificationLevelService } from "@/services/recruitment-services/educationQualificationLevel.service";
+import { useToast } from "@/components/admin/ui/Toast";
+import type { QualificationLevelDTO } from "@/types/recruitment/profileRequirements.types";
+import { EDUCATION_LEVEL_LABELS } from "@/types/recruitment/profileRequirements.types";
 
-interface Props {
-  data: any[];
-  onChange: (data: any[]) => void;
-  existingEducation: any[];
-}
-
-const QUALIFICATION_LEVELS = [
-  { value: "CERTIFICATE", label: "Certificate" },
-  { value: "DIPLOMA", label: "Diploma" },
-  { value: "BACHELORS", label: "Bachelor's Degree" },
-  { value: "MASTERS", label: "Master's Degree" },
-  { value: "PHD", label: "Doctor of Philosophy (PhD)" },
-  { value: "OTHER", label: "Other" },
+// ─── Static fallback levels (shown while API loads / if API fails) ────────────
+const FALLBACK_LEVELS: QualificationLevelDTO[] = [
+  {
+    id: "f1",
+    key: "KCPE",
+    label: "KCPE (Kenya Certificate of Primary Education)",
+    sortOrder: 1,
+    isActive: true,
+    isSystem: true,
+  },
+  {
+    id: "f2",
+    key: "KCSE",
+    label: "KCSE (Kenya Certificate of Secondary Education)",
+    sortOrder: 2,
+    isActive: true,
+    isSystem: true,
+  },
+  {
+    id: "f3",
+    key: "A_LEVEL",
+    label: "A-Level / Form 6",
+    sortOrder: 3,
+    isActive: true,
+    isSystem: true,
+  },
+  {
+    id: "f4",
+    key: "CERTIFICATE",
+    label: "Certificate",
+    sortOrder: 4,
+    isActive: true,
+    isSystem: true,
+  },
+  {
+    id: "f5",
+    key: "POST_GRADUATE_DIPLOMA",
+    label: "Postgraduate Diploma",
+    sortOrder: 5,
+    isActive: true,
+    isSystem: true,
+  },
+  {
+    id: "f6",
+    key: "DIPLOMA",
+    label: "Diploma",
+    sortOrder: 6,
+    isActive: true,
+    isSystem: true,
+  },
+  {
+    id: "f7",
+    key: "BACHELORS",
+    label: "Bachelor's Degree",
+    sortOrder: 7,
+    isActive: true,
+    isSystem: true,
+  },
+  {
+    id: "f8",
+    key: "MASTERS",
+    label: "Master's Degree",
+    sortOrder: 8,
+    isActive: true,
+    isSystem: true,
+  },
+  {
+    id: "f9",
+    key: "PHD",
+    label: "Doctor of Philosophy (PhD)",
+    sortOrder: 9,
+    isActive: true,
+    isSystem: true,
+  },
+  {
+    id: "f10",
+    key: "OTHER",
+    label: "Other",
+    sortOrder: 10,
+    isActive: true,
+    isSystem: true,
+  },
 ];
 
-const getQualLabel = (value: string) =>
-  QUALIFICATION_LEVELS.find((q) => q.value === value)?.label || value;
+// ─── Types
 
-export default function EducationSection({ data, onChange, existingEducation }: Props) {
+interface EduItem {
+  id: string;
+  degree: string;
+  degreeLevel?: string | null;
+  fieldOfStudy: string;
+  institution: string;
+  startDate: string;
+  endDate?: string | null;
+  isCurrent: boolean;
+  grade?: string | null;
+}
+
+interface Props {
+  initialEducation?: EduItem[];
+  /** Keys from education_qualification_levels (may include custom admin-added keys) */
+  requiredEducationLevels?: string[];
+  onCountChange?: (count: number) => void;
+}
+
+// ─── Component
+
+export default function EducationSection({
+  initialEducation = [],
+  requiredEducationLevels = [],
+  onCountChange,
+}: Props) {
+  const { showToast } = useToast();
+
+  // ── Qualification levels from DB
+  const [qualLevels, setQualLevels] =
+    useState<QualificationLevelDTO[]>(FALLBACK_LEVELS);
+  const [levelsLoading, setLevelsLoading] = useState(true);
+
+  // ── Education items
+  const [items, setItems] = useState<EduItem[]>(initialEducation);
   const [showForm, setShowForm] = useState(false);
-  const [currentEdu, setCurrentEdu] = useState({
-    degree: "",          // stores the qualification level VALUE (e.g. "BACHELORS")
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const [form, setForm] = useState({
+    degree: "",
     fieldOfStudy: "",
     institution: "",
     startDate: "",
@@ -52,18 +171,51 @@ export default function EducationSection({ data, onChange, existingEducation }: 
     grade: "",
   });
 
-  const handleAdd = () => {
-    if (
-      !currentEdu.degree ||
-      !currentEdu.institution ||
-      !currentEdu.fieldOfStudy ||
-      !currentEdu.startDate
-    ) {
-      return;
-    }
+  // ── Load qualification levels
+  useEffect(() => {
+    let mounted = true;
 
-    onChange([...data, { ...currentEdu }]);
-    setCurrentEdu({
+    (async () => {
+      try {
+        setLevelsLoading(true);
+        const res = await educationQualificationLevelService.getActive();
+        if (
+          mounted &&
+          res.success &&
+          Array.isArray(res.data) &&
+          res.data.length > 0
+        ) {
+          setQualLevels(res.data);
+        }
+        // If API returns empty or fails, keep fallback levels
+      } catch {
+        // Keep fallback levels — no toast needed for transparent fallback
+      } finally {
+        if (mounted) setLevelsLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // ── Helpers
+
+  const getLabelForKey = useCallback(
+    (key: string): string => {
+      const found = qualLevels.find((l) => l.key === key);
+      if (found) return found.label;
+      // fallback to static map
+      return (EDUCATION_LEVEL_LABELS as Record<string, string>)[key] ?? key;
+    },
+    [qualLevels],
+  );
+
+  const reportCount = (list: EduItem[]) => onCountChange?.(list.length);
+
+  const resetForm = () =>
+    setForm({
       degree: "",
       fieldOfStudy: "",
       institution: "",
@@ -72,11 +224,91 @@ export default function EducationSection({ data, onChange, existingEducation }: 
       isCurrent: false,
       grade: "",
     });
-    setShowForm(false);
+
+  // ── Add
+  const handleAdd = async () => {
+    if (
+      !form.degree ||
+      !form.fieldOfStudy.trim() ||
+      !form.institution.trim() ||
+      !form.startDate
+    ) {
+      showToast({
+        type: "error",
+        title: "Required",
+        message:
+          "Qualification level, field of study, institution and start date are required",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await candidateService.addEducation({
+        degree: form.degree,
+        degreeLevel: form.degree,
+        fieldOfStudy: form.fieldOfStudy.trim(),
+        institution: form.institution.trim(),
+        startDate: form.startDate,
+        endDate: form.isCurrent ? undefined : form.endDate || undefined,
+        isCurrent: form.isCurrent,
+        grade: form.grade.trim() || undefined,
+      });
+
+      if (res.success && res.data) {
+        const next = [...items, res.data as EduItem];
+        setItems(next);
+        resetForm();
+        setShowForm(false);
+        reportCount(next);
+        showToast({
+          type: "success",
+          title: "Saved",
+          message: "Education saved to your profile",
+        });
+      } else {
+        showToast({
+          type: "error",
+          title: "Save failed",
+          message: res.message || "Could not save education",
+        });
+      }
+    } catch (err: any) {
+      showToast({
+        type: "error",
+        title: "Error",
+        message: err.message || "Failed to save education",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleRemove = (index: number) => {
-    onChange(data.filter((_, i) => i !== index));
+  // ── Remove
+  const handleRemove = async (id: string) => {
+    setDeleting(id);
+    try {
+      const res = await candidateService.deleteEducation(id);
+      if (res.success !== false) {
+        const next = items.filter((e) => e.id !== id);
+        setItems(next);
+        reportCount(next);
+      } else {
+        showToast({
+          type: "error",
+          title: "Error",
+          message: res.message || "Could not remove education",
+        });
+      }
+    } catch (err: any) {
+      showToast({
+        type: "error",
+        title: "Error",
+        message: err.message || "Failed to remove education",
+      });
+    } finally {
+      setDeleting(null);
+    }
   };
 
   return (
@@ -89,7 +321,8 @@ export default function EducationSection({ data, onChange, existingEducation }: 
               Education <span className="text-red-500">*</span>
             </CardTitle>
             <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-              Add your educational qualifications
+              Add your educational qualifications — saved instantly to your
+              profile
             </p>
           </div>
           <Button
@@ -111,72 +344,74 @@ export default function EducationSection({ data, onChange, existingEducation }: 
       </CardHeader>
 
       <CardContent className="space-y-5">
-        {/* Existing Education */}
-        {existingEducation.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <Label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                Already in your profile
-              </Label>
-            </div>
-            <div className="space-y-2">
-              {existingEducation.slice(0, 2).map((edu) => (
-                <div
-                  key={edu.id}
-                  className="p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700"
-                >
-                  <p className="font-semibold text-neutral-900 dark:text-white text-sm">
-                    {getQualLabel(edu.degree) || edu.degree}
-                  </p>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400">
-                    {edu.institution}
-                  </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-0.5">
-                    {edu.fieldOfStudy}
-                  </p>
-                </div>
-              ))}
-              {existingEducation.length > 2 && (
-                <p className="text-sm text-neutral-500 dark:text-neutral-400 text-center">
-                  +{existingEducation.length - 2} more
-                </p>
-              )}
+        {/* ── Required levels notice ── */}
+        {requiredEducationLevels.length > 0 && (
+          <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+            <Info className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                Required education level(s) for this position:
+              </p>
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {requiredEducationLevels.map((lvl) => (
+                  <Badge
+                    key={lvl}
+                    className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 text-xs border border-amber-300 dark:border-amber-700"
+                  >
+                    {getLabelForKey(lvl)}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* New Entries */}
-        {data.length > 0 && (
-          <div className="space-y-3">
-            <Label className="text-sm font-medium text-green-700 dark:text-green-300">
-              Adding now
-            </Label>
+        {/* ── Existing education entries ── */}
+        {items.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <Label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+                {items.length} education entr{items.length === 1 ? "y" : "ies"}{" "}
+                in your profile
+              </Label>
+            </div>
             <div className="space-y-2">
-              {data.map((edu, index) => (
+              {items.map((edu) => (
                 <div
-                  key={index}
-                  className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 flex items-start justify-between gap-3"
+                  key={edu.id}
+                  className="p-4 bg-neutral-50 dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 flex items-start justify-between gap-3"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-green-900 dark:text-green-200 text-sm">
-                      {getQualLabel(edu.degree)}
+                    <p className="font-semibold text-neutral-900 dark:text-white text-sm">
+                      {getLabelForKey(edu.degreeLevel || edu.degree) ||
+                        edu.degree}
                     </p>
-                    <p className="text-sm text-green-700 dark:text-green-300">
+                    <p className="text-sm text-neutral-600 dark:text-neutral-400">
                       {edu.institution}
                     </p>
-                    <p className="text-xs text-green-600 dark:text-green-400 mt-0.5">
+                    <p className="text-xs text-neutral-500 dark:text-neutral-500 mt-0.5">
                       {edu.fieldOfStudy}
                     </p>
+                    {edu.grade && (
+                      <p className="text-xs text-neutral-400 mt-0.5">
+                        Grade: {edu.grade}
+                      </p>
+                    )}
                   </div>
                   <Button
-                    onClick={() => handleRemove(index)}
+                    onClick={() => handleRemove(edu.id)}
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0"
+                    disabled={deleting === edu.id}
+                    className="text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 shrink-0"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    {deleting === edu.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
                   </Button>
                 </div>
               ))}
@@ -184,32 +419,38 @@ export default function EducationSection({ data, onChange, existingEducation }: 
           </div>
         )}
 
-        {/* Add Form */}
+        {/* ── Add Form ── */}
         {showForm && (
           <div className="space-y-4 p-5 border-2 border-dashed border-neutral-300 dark:border-neutral-700 rounded-lg bg-neutral-50 dark:bg-neutral-800/50">
-
-            {/* Qualification Level — DROPDOWN */}
+            {/* Qualification Level dropdown */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-neutral-900 dark:text-white">
                 Qualification Level <span className="text-red-500">*</span>
               </Label>
-              <Select
-                value={currentEdu.degree}
-                onValueChange={(value) =>
-                  setCurrentEdu({ ...currentEdu, degree: value })
-                }
-              >
-                <SelectTrigger className="h-11 bg-white dark:bg-neutral-900">
-                  <SelectValue placeholder="Select qualification level..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {QUALIFICATION_LEVELS.map((level) => (
-                    <SelectItem key={level.value} value={level.value}>
-                      {level.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {levelsLoading ? (
+                <div className="flex items-center gap-2 h-11 px-3 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900">
+                  <Loader2 className="h-4 w-4 animate-spin text-neutral-400" />
+                  <span className="text-sm text-neutral-400">
+                    Loading levels…
+                  </span>
+                </div>
+              ) : (
+                <Select
+                  value={form.degree}
+                  onValueChange={(v) => setForm({ ...form, degree: v })}
+                >
+                  <SelectTrigger className="h-11 bg-white dark:bg-neutral-900">
+                    <SelectValue placeholder="Select qualification level…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {qualLevels.map((lv) => (
+                      <SelectItem key={lv.key} value={lv.key}>
+                        {lv.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Field of Study */}
@@ -218,9 +459,9 @@ export default function EducationSection({ data, onChange, existingEducation }: 
                 Field of Study <span className="text-red-500">*</span>
               </Label>
               <Input
-                value={currentEdu.fieldOfStudy}
+                value={form.fieldOfStudy}
                 onChange={(e) =>
-                  setCurrentEdu({ ...currentEdu, fieldOfStudy: e.target.value })
+                  setForm({ ...form, fieldOfStudy: e.target.value })
                 }
                 placeholder="e.g. Computer Science, Business Administration"
                 className="h-11"
@@ -235,9 +476,9 @@ export default function EducationSection({ data, onChange, existingEducation }: 
               <div className="relative">
                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400 pointer-events-none" />
                 <Input
-                  value={currentEdu.institution}
+                  value={form.institution}
                   onChange={(e) =>
-                    setCurrentEdu({ ...currentEdu, institution: e.target.value })
+                    setForm({ ...form, institution: e.target.value })
                   }
                   placeholder="e.g. University of Nairobi"
                   className="pl-10 h-11"
@@ -245,23 +486,7 @@ export default function EducationSection({ data, onChange, existingEducation }: 
               </div>
             </div>
 
-            {/* Grade (optional) */}
-            {/* <div className="space-y-2">
-              <Label className="text-sm font-medium text-neutral-900 dark:text-white">
-                Grade / GPA{" "}
-                <span className="text-xs font-normal text-neutral-500">(Optional)</span>
-              </Label>
-              <Input
-                value={currentEdu.grade}
-                onChange={(e) =>
-                  setCurrentEdu({ ...currentEdu, grade: e.target.value })
-                }
-                placeholder="e.g. First Class Honours, 3.8 GPA, Upper Second"
-                className="h-11"
-              />
-            </div> */}
-
-            {/* Start + End Date */}
+            {/* Dates */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-neutral-900 dark:text-white">
@@ -271,15 +496,14 @@ export default function EducationSection({ data, onChange, existingEducation }: 
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400 pointer-events-none" />
                   <Input
                     type="date"
-                    value={currentEdu.startDate}
+                    value={form.startDate}
                     onChange={(e) =>
-                      setCurrentEdu({ ...currentEdu, startDate: e.target.value })
+                      setForm({ ...form, startDate: e.target.value })
                     }
                     className="pl-10 h-11"
                   />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-neutral-900 dark:text-white">
                   End Date
@@ -288,11 +512,11 @@ export default function EducationSection({ data, onChange, existingEducation }: 
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400 pointer-events-none" />
                   <Input
                     type="date"
-                    value={currentEdu.endDate}
+                    value={form.endDate}
                     onChange={(e) =>
-                      setCurrentEdu({ ...currentEdu, endDate: e.target.value })
+                      setForm({ ...form, endDate: e.target.value })
                     }
-                    disabled={currentEdu.isCurrent}
+                    disabled={form.isCurrent}
                     className="pl-10 h-11 disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </div>
@@ -303,12 +527,12 @@ export default function EducationSection({ data, onChange, existingEducation }: 
             <div className="flex items-center gap-3 p-3 bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700">
               <Checkbox
                 id="eduIsCurrent"
-                checked={currentEdu.isCurrent}
-                onCheckedChange={(checked) =>
-                  setCurrentEdu({
-                    ...currentEdu,
-                    isCurrent: !!checked,
-                    endDate: checked ? "" : currentEdu.endDate,
+                checked={form.isCurrent}
+                onCheckedChange={(v) =>
+                  setForm({
+                    ...form,
+                    isCurrent: !!v,
+                    endDate: v ? "" : form.endDate,
                   })
                 }
               />
@@ -317,17 +541,41 @@ export default function EducationSection({ data, onChange, existingEducation }: 
               </Label>
             </div>
 
-            {/* Actions */}
+            {/* Grade (optional) */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-neutral-900 dark:text-white">
+                Grade / GPA{" "}
+                <span className="text-neutral-400 font-normal">(optional)</span>
+              </Label>
+              <Input
+                value={form.grade}
+                onChange={(e) => setForm({ ...form, grade: e.target.value })}
+                placeholder="e.g. First Class, 3.8 GPA, B+"
+                className="h-11"
+              />
+            </div>
+
             <div className="flex gap-2 pt-1">
               <Button
                 onClick={handleAdd}
                 type="button"
-                className="flex-1 bg-primary-500 hover:bg-primary-600 text-white"
+                disabled={saving}
+                className="flex-1"
               >
-                Add Education
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Add Education"
+                )}
               </Button>
               <Button
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  resetForm();
+                }}
                 type="button"
                 variant="outline"
                 className="flex-1"
@@ -338,10 +586,10 @@ export default function EducationSection({ data, onChange, existingEducation }: 
           </div>
         )}
 
-        {/* Validation Message */}
-        {data.length === 0 && existingEducation.length === 0 && (
+        {/* ── Empty-state warning ── */}
+        {items.length === 0 && (
           <div className="flex items-center gap-2 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-            <GraduationCap className="h-4 w-4 text-orange-600 shrink-0" />
+            <AlertCircle className="h-4 w-4 text-orange-600 shrink-0" />
             <p className="text-sm text-orange-900 dark:text-orange-200">
               At least 1 education entry is required
             </p>

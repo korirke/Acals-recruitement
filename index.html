@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Under Maintenance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --gold: #c9a84c;
+      --gold-dim: #7a6230;
+      --white: #f0ede6;
+      --muted: #5a5870;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--white);
+      font-family: 'DM Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Ambient glow */
+    .glow {
+      position: fixed;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .glow-1 {
+      background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%);
+      top: -100px; left: -100px;
+      animation: drift1 12s ease-in-out infinite alternate;
+    }
+    .glow-2 {
+      background: radial-gradient(circle, rgba(100,80,200,0.08) 0%, transparent 70%);
+      bottom: -150px; right: -100px;
+      animation: drift2 15s ease-in-out infinite alternate;
+    }
+
+    @keyframes drift1 { to { transform: translate(80px, 60px); } }
+    @keyframes drift2 { to { transform: translate(-60px, -80px); } }
+
+    /* Center card */
+    .card {
+      position: relative;
+      z-index: 5;
+      text-align: center;
+      padding: 64px 72px;
+      max-width: 620px;
+      width: 90%;
+      background: var(--surface);
+      border: 1px solid rgba(201,168,76,0.15);
+      border-radius: 4px;
+      animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Gears icon */
+    .icon-wrap {
+      margin-bottom: 32px;
+      display: inline-block;
+      animation: fadeUp 1s 0.15s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    .gear-svg {
+      width: 64px;
+      height: 64px;
+    }
+
+    .gear-outer {
+      transform-origin: 50% 50%;
+      animation: spin 10s linear infinite;
+    }
+    .gear-inner {
+      transform-origin: 50% 50%;
+      animation: spin 10s linear infinite reverse;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Headline */
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--white);
+      line-height: 1.1;
+      margin-bottom: 16px;
+      animation: fadeUp 1s 0.25s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    h1 span {
+      color: var(--gold);
+    }
+
+    /* Divider */
+    .divider {
+      width: 40px;
+      height: 1px;
+      background: var(--gold-dim);
+      margin: 20px auto;
+      animation: fadeUp 1s 0.35s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    /* Body text */
+    p {
+      font-size: 0.82rem;
+      line-height: 1.8;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      animation: fadeUp 1s 0.45s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    /* Status ticker */
+    .status {
+      margin-top: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      animation: fadeUp 1s 0.55s cubic-bezier(0.16,1,0.3,1) both;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--gold);
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.3; transform: scale(0.6); }
+    }
+
+    /* Footer */
+    .footer {
+      position: fixed;
+      bottom: 24px;
+      width: 100%;
+      text-align: center;
+      font-size: 0.68rem;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      z-index: 5;
+      animation: fadeUp 1s 0.7s cubic-bezier(0.16,1,0.3,1) both;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+
+  <div class="card">
+
+    <div class="icon-wrap">
+      <!-- Animated gear SVG -->
+      <svg class="gear-svg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <g class="gear-outer">
+          <path d="M32 20a12 12 0 1 0 0 24 12 12 0 0 0 0-24zm0 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12z" fill="#c9a84c" opacity="0.9"/>
+          <path d="M54.6 29.6l-3.8-.8a19.7 19.7 0 0 0-1.8-4.4l2.2-3.1a2 2 0 0 0-.2-2.6l-5.7-5.7a2 2 0 0 0-2.6-.2l-3.1 2.2a19.7 19.7 0 0 0-4.4-1.8l-.8-3.8A2 2 0 0 0 32.4 8h-8a2 2 0 0 0-2 1.6l-.8 3.8a19.7 19.7 0 0 0-4.4 1.8l-3.1-2.2a2 2 0 0 0-2.6.2l-5.7 5.7a2 2 0 0 0-.2 2.6l2.2 3.1a19.7 19.7 0 0 0-1.8 4.4l-3.8.8A2 2 0 0 0 0 31.6v8a2 2 0 0 0 1.6 2l3.8.8a19.7 19.7 0 0 0 1.8 4.4l-2.2 3.1a2 2 0 0 0 .2 2.6l5.7 5.7a2 2 0 0 0 2.6.2l3.1-2.2a19.7 19.7 0 0 0 4.4 1.8l.8 3.8A2 2 0 0 0 23.6 64h8a2 2 0 0 0 2-1.6l.8-3.8a19.7 19.7 0 0 0 4.4-1.8l3.1 2.2a2 2 0 0 0 2.6-.2l5.7-5.7a2 2 0 0 0 .2-2.6l-2.2-3.1a19.7 19.7 0 0 0 1.8-4.4l3.8-.8A2 2 0 0 0 56 39.6v-8a2 2 0 0 0-1.4-2z" fill="#c9a84c" opacity="0.2"/>
+        </g>
+      </svg>
+    </div>
+
+    <h1>We'll be <span>back soon.</span></h1>
+
+    <div class="divider"></div>
+
+    <p>
+      Our site is currently undergoing maintenance.<br>
+      We're making things better — won't be long now.
+    </p>
+
+    <div class="status">
+      <div class="dot"></div>
+      Work in progress
+    </div>
+
+  </div>
+
+  <div class="footer">© 2026 &nbsp;·&nbsp; Back shortly</div>
+
+</body>
+</html>

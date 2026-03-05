@@ -6,10 +6,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
 } from "@/components/careers/ui/dialog";
 import { Button } from "@/components/careers/ui/button";
-import { Separator } from "@/components/careers/ui/separator";
 import {
   Sparkles,
   Target,
@@ -18,16 +16,11 @@ import {
   CheckCircle2,
   FileText,
   Globe,
-  Shield,
   Send,
   Loader2,
   User,
-  Award,
-  Briefcase,
-  GraduationCap,
-  BookOpen,
-  Users,
-  BookText,
+  Wallet,
+  Paperclip,
 } from "lucide-react";
 
 interface Props {
@@ -58,17 +51,6 @@ export default function ConfirmationModal({
       return dateString;
     }
   };
-
-  const additions = [
-    { key: "skills", icon: Award, label: "skill", count: formData.skills.length },
-    { key: "experience", icon: Briefcase, label: "experience", count: formData.experience.length },
-    { key: "education", icon: GraduationCap, label: "education", count: formData.education.length },
-    { key: "publications", icon: BookOpen, label: "publication", count: formData.publications.length },
-    { key: "memberships", icon: Award, label: "membership", count: formData.memberships.length },
-    { key: "clearances", icon: Shield, label: "clearance", count: formData.clearances.length },
-    { key: "courses", icon: BookText, label: "course", count: formData.courses.length },
-    { key: "referees", icon: Users, label: "referee", count: formData.referees.length },
-  ].filter((a) => a.count > 0);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -107,7 +89,7 @@ export default function ConfirmationModal({
             </div>
           </div>
 
-          {/* Key Details Row */}
+          {/* Key Details */}
           <div className="grid grid-cols-2 gap-3">
             <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
               <div className="flex items-center gap-2 mb-1">
@@ -129,10 +111,27 @@ export default function ConfirmationModal({
                 </span>
               </div>
               <p className="text-sm font-bold text-blue-900 dark:text-blue-100">
-                {formData.availableStartDate ? formatDate(formData.availableStartDate) : "—"}
+                {formData.availableStartDate
+                  ? formatDate(formData.availableStartDate)
+                  : "—"}
               </p>
             </div>
           </div>
+
+          {/* Current Salary (optional) */}
+          {formData.currentSalary && (
+            <div className="p-4 bg-neutral-50 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl">
+              <div className="flex items-center gap-2 mb-1">
+                <Wallet className="w-3.5 h-3.5 text-neutral-600" />
+                <span className="text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                  Current Salary (optional)
+                </span>
+              </div>
+              <p className="text-sm font-bold text-neutral-900 dark:text-white">
+                KES {parseInt(formData.currentSalary || "0").toLocaleString()}
+              </p>
+            </div>
+          )}
 
           {/* Applicant Summary */}
           <div className="p-4 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-xl space-y-2">
@@ -144,26 +143,22 @@ export default function ConfirmationModal({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
               <div>
-                <span className="text-neutral-500 dark:text-neutral-400">Name: </span>
+                <span className="text-neutral-500 dark:text-neutral-400">
+                  Name:{" "}
+                </span>
                 <span className="font-medium text-neutral-900 dark:text-white">
                   {pipelineData?.profileSnapshot?.user?.firstName}{" "}
                   {pipelineData?.profileSnapshot?.user?.lastName}
                 </span>
               </div>
               <div>
-                <span className="text-neutral-500 dark:text-neutral-400">Email: </span>
+                <span className="text-neutral-500 dark:text-neutral-400">
+                  Email:{" "}
+                </span>
                 <span className="font-medium text-neutral-900 dark:text-white break-all">
                   {pipelineData?.profileSnapshot?.user?.email}
                 </span>
               </div>
-              {(pipelineData?.profileSnapshot?.user?.phone || formData.basic?.phone) && (
-                <div>
-                  <span className="text-neutral-500 dark:text-neutral-400">Phone: </span>
-                  <span className="font-medium text-neutral-900 dark:text-white">
-                    {formData.basic?.phone || pipelineData.profileSnapshot.user.phone}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
@@ -177,7 +172,7 @@ export default function ConfirmationModal({
                 </span>
               </div>
               <span className="text-xs text-neutral-500 bg-neutral-100 dark:bg-neutral-700 px-2 py-0.5 rounded-full">
-                {formData.coverLetter.length} chars
+                {formData.coverLetter?.length || 0} chars
               </span>
             </div>
             <div className="max-h-28 overflow-y-auto p-3 bg-neutral-50 dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-700">
@@ -185,6 +180,20 @@ export default function ConfirmationModal({
                 {formData.coverLetter}
               </p>
             </div>
+
+            {formData.coverLetterFileUrl && (
+              <div className="mt-3 flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                <Paperclip className="w-4 h-4 text-green-700 shrink-0" />
+                <a
+                  href={formData.coverLetterFileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-green-800 dark:text-green-200 underline break-all"
+                >
+                  View uploaded cover letter file
+                </a>
+              </div>
+            )}
           </div>
 
           {/* Portfolio */}
@@ -199,28 +208,6 @@ export default function ConfirmationModal({
               >
                 {formData.portfolioUrl}
               </a>
-            </div>
-          )}
-
-          {/* Profile Additions */}
-          {additions.length > 0 && (
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-              <div className="flex items-center gap-2 mb-3">
-                <CheckCircle2 className="w-4 h-4 text-green-600" />
-                <span className="text-sm font-semibold text-green-900 dark:text-green-200">
-                  New Profile Additions
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-y-2 gap-x-4">
-                {additions.map(({ icon: Icon, label, count }) => (
-                  <div key={label} className="flex items-center gap-2 text-sm text-green-800 dark:text-green-200">
-                    <Icon className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                    <span>
-                      {count} {label}{count !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 
@@ -246,8 +233,12 @@ export default function ConfirmationModal({
                 "Confirmation email sent to your inbox",
                 "Track progress from your applications dashboard",
                 "You'll be notified when your application is reviewed",
+                "Note: profile sections are auto-saved as you add them",
               ].map((step, i) => (
-                <div key={i} className="flex items-start gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+                <div
+                  key={i}
+                  className="flex items-start gap-2 text-sm text-neutral-700 dark:text-neutral-300"
+                >
                   <div className="w-5 h-5 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-600 flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
                     {i + 1}
                   </div>
