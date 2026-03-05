@@ -61,12 +61,12 @@ export default function AdminNav({ onNavigate }: AdminNavProps) {
       icon: Shield,
       roles: ["MODERATOR", "HR_MANAGER", "SUPER_ADMIN"],
     },
-    {
-      href: "/recruitment-portal/applications",
-      label: "Applications",
-      icon: FileText,
-      roles: ["EMPLOYER", "HR_MANAGER", "SUPER_ADMIN"],
-    },
+    // {
+    //   href: "/recruitment-portal/applications",
+    //   label: "Applications",
+    //   icon: Mail,
+    //   roles: ["EMPLOYER", "HR_MANAGER", "SUPER_ADMIN"],
+    // },
     {
       href: "/recruitment-portal/interviews",
       label: "Interviews",
