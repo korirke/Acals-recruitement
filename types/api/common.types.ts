@@ -4,6 +4,7 @@
  */
 
 export interface ApiResponse<T = any> {
+  messages: any;
   headers: any;
   success: boolean;
   message: string;
