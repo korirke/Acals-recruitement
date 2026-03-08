@@ -76,7 +76,7 @@ apiClient.interceptors.response.use(
         window.location.href = '/login';
       }
       
-      throw new Error(data?.message || 'Unauthorized. Please log in again.');
+      throw new Error(data?.messages?.error ||data?.message || 'Unauthorized. Please log in again.');
     }
 
     // 403 Forbidden
