@@ -13,5 +13,6 @@ export * from "./jobQuestionnaire.service";
 export * from "./jobApplicationConfig.service";
 export * from "./educationQualificationLevel.service";
 export * from "./resumeCleanupService";
+export { analyticsService } from './analytics-service';
 
 

@@ -39,6 +39,7 @@ export * from './recruitment/company.types';
 export * from './recruitment/profileFieldSettings.types';
 export * from './recruitment/shortlist.types';
 export * from "./recruitment/jobQuestionnaire.types";
+export * from './recruitment/analytics.types';
 
 // ========================================
 // System Types
