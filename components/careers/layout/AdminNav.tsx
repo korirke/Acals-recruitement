@@ -43,12 +43,12 @@ export default function AdminNav({ onNavigate }: AdminNavProps) {
       icon: LayoutDashboard,
       roles: ["EMPLOYER", "MODERATOR", "HR_MANAGER", "SUPER_ADMIN"],
     },
-    // {
-    //   href: "/recruitment-portal/analytics",
-    //   label: "Analytics",
-    //   icon: BarChart3,
-    //   roles: ["HR_MANAGER", "SUPER_ADMIN"],
-    // },
+    {
+      href: "/recruitment-portal/analytics",
+      label: "Analytics",
+      icon: BarChart3,
+      roles: ["HR_MANAGER", "SUPER_ADMIN"],
+    },
     {
       href: "/recruitment-portal/jobs",
       label: "Jobs",
