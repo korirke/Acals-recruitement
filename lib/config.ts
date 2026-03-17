@@ -3,14 +3,14 @@ export const config = {
   apiBaseUrl:
     process.env.NEXT_PUBLIC_API_BASE_URL ||
     (process.env.NODE_ENV === "production"
-      ? "https://www.acalcareers.co.ke/v2/api"
+      ? "https://fortunekenya.com/v2/api"
       : "http://localhost:8080/api"),
 
   // Media/Upload Base URL (without /api)
   mediaBaseUrl:
     process.env.NEXT_PUBLIC_MEDIA_BASE_URL ||
     (process.env.NODE_ENV === "production"
-      ? "https://www.acalcareers.co.ke/v2"
+      ? "https://fortunekenya.com/v2"
       : "http://localhost:8080"),
 
   // Site Configuration
