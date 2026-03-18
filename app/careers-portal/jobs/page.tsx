@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/careers/ui/select";
 import { Card } from "@/components/careers/ui/card";
-import { Search, SlidersHorizontal, Briefcase, Loader2 } from "lucide-react";
+import { Search, SlidersHorizontal, Briefcase, Loader2, AlertCircle } from "lucide-react";
 import type { Job, JobCategory } from "@/types";
 import { JOB_TYPE_LABELS, EXPERIENCE_LEVEL_LABELS } from "@/types";
 import Navbar from "@/components/careers/Navbar";
@@ -133,6 +133,18 @@ function JobsPageContent() {
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-neutral-950">
       <Navbar />
+
+      {/* ── Unavailability Banner ── */}
+      {!loading && pagination.total === 0 && (
+        <div className="w-full bg-amber-50 dark:bg-amber-950 border-b border-amber-200 dark:border-amber-800">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 shrink-0 text-amber-500 dark:text-amber-400" />
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+              The jobs you are looking for are currently unavailable.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Hero Section */}
       <section className="bg-linear-to-r from-primary-500 to-orange-500 py-12 md:py-16">
