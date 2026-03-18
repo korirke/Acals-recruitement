@@ -77,12 +77,6 @@ export default function Navbar() {
             >
               About
             </Link>
-            <Link
-              href={`${BASE}/contact-us`}
-              className="text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
-            >
-              Contact
-            </Link>
           </div>
 
           {/* Auth Section */}
